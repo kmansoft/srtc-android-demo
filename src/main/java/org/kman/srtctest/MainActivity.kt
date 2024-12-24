@@ -28,7 +28,7 @@ class MainActivity : Activity() {
         }
         return super.onKeyDown(keyCode, event)
     }
- 
+
     private fun onClickConnect() {
         val server = mEditWhipServer.text.toString().trim()
         if (server.isEmpty()) {

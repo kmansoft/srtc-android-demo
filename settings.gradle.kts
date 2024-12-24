@@ -20,4 +20,3 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "SRTC Test"
-include(":app")
