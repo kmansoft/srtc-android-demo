@@ -39,6 +39,8 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.prefs)
+    implementation(libs.androidx.prefs.ktx)
 
     testImplementation(libs.junit)
 

@@ -8,4 +8,6 @@
     <string name="error_server_missing">Server name is missing</string>
     <string name="error_server_invalid">Server name is invalid</string>
     <string name="error_token_missing">Token is missing</string>
+
+    <string name="error_parsing_claims">Error parsing token claims: %s</string>
 </resources>
