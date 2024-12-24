@@ -10,4 +10,6 @@
     <string name="error_token_missing">Token is missing</string>
 
     <string name="error_parsing_claims">Error parsing token claims: %s</string>
+
+    <string name="sdp_offer_error">SDP offer error: %s</string>
 </resources>

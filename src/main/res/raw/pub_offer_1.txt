@@ -1,0 +1,11 @@
+v=0
+o=alice 2890844526 2890844526 IN IP4 192.168.1.192
+t=0 0
+a=sendonly
+m=audio 49170 UDP/TLS/RTP/SAVPF 111
+a=candidate:0 2 RTP 49170 192.168.1.192 49170 typ host
+c=IN IP4 217.345.789.123
+a=rtpmap:111 opus/48000/2
+m=video 51372 UDP/TLS/RTP/SAVPF 100
+a=candidate:0 2 RTP 51372 192.168.1.192 51372 typ host
+a=rtpmap:100 H264/90000

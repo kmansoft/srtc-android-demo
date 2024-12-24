@@ -42,6 +42,8 @@ dependencies {
     implementation(libs.androidx.prefs)
     implementation(libs.androidx.prefs.ktx)
 
+    implementation(libs.okhttp)
+
     testImplementation(libs.junit)
 
     androidTestImplementation(libs.androidx.junit)

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+#preview {
+	width: 600px;
+	height: 400px;
+}
+</style>
+</head>
+<body>
+<h1>WebRTC publish</h1>
+<video id="preview" autoplay playsinline></video>
+</body>
+<script>
+async function publish() {
+	const elPreview = document.getElementById("preview");
+
+	const videoMedia = await navigator.mediaDevices.getUserMedia(
+			{ video: { width: 1280, height: 720 } }
+		)
+	const audioMedia = await navigator.mediaDevices.getUserMedia(
+			{ audio: true }
+		)
+
+	console.log("Video media", videoMedia);
+	console.log("Audio media", audioMedia);
+
+	elPreview.srcObject = videoMedia;
+
+	const pc = new RTCPeerConnection();
+	pc.addTrack(videoMedia.getTracks()[0]);
+	pc.addTrack(audioMedia.getTracks()[0]);
+
+	const offer = await pc.createOffer();
+	console.log('Offer', offer.sdp);
+}
+
+(async() => {
+  await publish();
+})();
+
+</script>
+</html>

@@ -6,10 +6,15 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Base64
+import android.util.Log
 import android.view.KeyEvent
 import android.widget.Button
 import android.widget.EditText
 import androidx.preference.PreferenceManager
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import org.json.JSONObject
 import java.nio.charset.StandardCharsets
 
@@ -73,13 +78,14 @@ class MainActivity : Activity() {
             val decoded = Base64.decode(claims, Base64.NO_PADDING)
             val json = JSONObject(String(decoded, StandardCharsets.UTF_8))
 
-            val server = json.getString("whip_url")
+            var server = json.getString("whip_url")
             val participantId = json.getString("jti")
             val token = "${header}.${claims}.${signature}"
 
             if (server.isNotEmpty() && participantId.isNotEmpty()) {
-                mEditWhipServer.setText("${server}/publish/${participantId}")
+                server = "${server}/publish/${participantId}"
             }
+            mEditWhipServer.setText(server)
             mEditWhipToken.setText(token)
 
             mSharedPrefs.edit().apply {
@@ -113,6 +119,28 @@ class MainActivity : Activity() {
             return
         }
         mEditWhipToken.error = null
+
+        // test code
+        val offer = Util.loadRawResource(this, R.raw.pub_offer_chrome_av_smaller)
+        val request = Request.Builder().apply {
+            url(server)
+            method("POST", offer.toRequestBody("application/sdp".toMediaType()))
+            header("Authorization", "Bearer $token")
+        }.build()
+
+        HttpClient.execute(request, object : HttpClient.Callback {
+            override fun onCompleted(response: Response?, data: ByteArray?, error: Exception?) {
+                if (error != null) {
+                    Util.toast(this@MainActivity, R.string.sdp_offer_error, error.toString())
+                    return
+                }
+
+                if (data != null) {
+                    val answer = String(data, StandardCharsets.UTF_8)
+                    MyLog.i(TAG, "SDP answer:\n%s", answer)
+                }
+            }
+        })
     }
 
     private lateinit var mEditWhipServer: EditText
