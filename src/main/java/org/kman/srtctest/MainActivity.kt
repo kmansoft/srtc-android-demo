@@ -122,7 +122,7 @@ class MainActivity : Activity() {
         mEditWhipToken.error = null
 
         // test code
-        val offer = Util.loadRawResource(this, R.raw.pub_offer_chrome_av_smaller)
+        val offer = Util.loadRawResource(this, R.raw.pub_offer_chrome_v_only)
         val request = Request.Builder().apply {
             url(server)
             method("POST", offer.toRequestBody("application/sdp".toMediaType()))
