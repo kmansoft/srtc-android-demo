@@ -24,7 +24,7 @@ android {
                     "-fno-rtti"
                 )
                 abiFilters.clear()
-                abiFilters += listOf("arm64-v8a")
+                abiFilters += listOf("arm64-v8a", "x86_64")
             }
         }
     }

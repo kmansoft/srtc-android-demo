@@ -137,7 +137,7 @@ class MainActivity : Activity() {
         mPeerConnection = PeerConnection()
 
         // test code
-        val offer = Util.loadRawResource(this, R.raw.pub_offer_chrome_v_only)
+        val offer = Util.loadRawResource(this, R.raw.pub_offer_chrome_av_smaller)
         val request = Request.Builder().apply {
             url(server)
             method("POST", offer.toRequestBody("application/sdp".toMediaType()))

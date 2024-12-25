@@ -1,0 +1,3 @@
+[submodule "src/main/cpp/srtc"]
+	path = src/main/cpp/srtc
+	url = git@gitlab.com:kmansoft/simple-rtc-library.git
