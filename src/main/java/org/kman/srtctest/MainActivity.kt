@@ -7,7 +7,6 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.SystemClock
 import android.util.Base64
-import android.util.Log
 import android.view.KeyEvent
 import android.widget.Button
 import android.widget.EditText
@@ -17,6 +16,8 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.json.JSONObject
+import org.kman.srtctest.rtc.PeerConnection
+import org.kman.srtctest.util.MyLog
 import java.nio.charset.StandardCharsets
 
 class MainActivity : Activity() {
@@ -37,6 +38,13 @@ class MainActivity : Activity() {
 
         setFieldsFromPrefs()
         setFieldsFromIntent(intent)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        mPeerConnection?.release()
+        mPeerConnection = null
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -121,6 +129,13 @@ class MainActivity : Activity() {
         }
         mEditWhipToken.error = null
 
+        // Release current peer connection
+        mPeerConnection?.release()
+        mPeerConnection = null
+
+        // And create a new one
+        mPeerConnection = PeerConnection()
+
         // test code
         val offer = Util.loadRawResource(this, R.raw.pub_offer_chrome_v_only)
         val request = Request.Builder().apply {
@@ -148,11 +163,13 @@ class MainActivity : Activity() {
         })
     }
 
+    private lateinit var mSharedPrefs: SharedPreferences
+
     private lateinit var mEditWhipServer: EditText
     private lateinit var mEditWhipToken: EditText
     private lateinit var mButtonConnect: Button
 
-    private lateinit var mSharedPrefs: SharedPreferences
+    private var mPeerConnection: PeerConnection? = null
 
     companion object {
         private const val TAG = "MainActivity"

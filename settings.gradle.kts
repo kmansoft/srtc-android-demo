@@ -19,4 +19,4 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "SRTC Test"
+rootProject.name = "SRTC-Test"
