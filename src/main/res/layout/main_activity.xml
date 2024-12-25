@@ -1,37 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fitsSystemWindows="true"
-    android:padding="16dp">
+    android:fitsSystemWindows="true">
 
-    <LinearLayout
-        android:layout_alignParentBottom="true"
-        android:id="@+id/bottom_bar"
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:layout_height="match_parent"
+        android:padding="16dp">
 
-        <EditText
-            android:id="@+id/whip_server"
-            android:inputType="textUri"
-            android:hint="@string/hint_whip_server"
+        <LinearLayout
+            android:id="@+id/bottom_bar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:orientation="vertical">
 
-        <EditText
-            android:id="@+id/whip_token"
-            android:inputType="textNoSuggestions"
-            android:hint="@string/hint_whip_token"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            <EditText
+                android:id="@+id/whip_server"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/hint_whip_server"
+                android:inputType="textUri" />
 
-        <Button
-            android:text="@string/whip_connect"
-            android:id="@+id/whip_connect"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            <EditText
+                android:id="@+id/whip_token"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/hint_whip_token"
+                android:inputType="textNoSuggestions" />
 
-    </LinearLayout>
+            <Button
+                android:id="@+id/whip_connect"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/whip_connect" />
 
-</RelativeLayout>
+        </LinearLayout>
+
+    </RelativeLayout>
+</FrameLayout>

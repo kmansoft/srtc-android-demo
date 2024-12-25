@@ -137,7 +137,33 @@ class MainActivity : Activity() {
         mPeerConnection = PeerConnection()
 
         // test code
-        val offer = Util.loadRawResource(this, R.raw.pub_offer_chrome_av_smaller)
+        val claims = token.split('.')[1]
+        val decoded = Base64.decode(claims, Base64.NO_PADDING)
+        val json = JSONObject(String(decoded, StandardCharsets.UTF_8))
+
+        val peerConnection = requireNotNull(mPeerConnection)
+
+        val videoConfig = PeerConnection.VideoConfig()
+        videoConfig.cname = json.getString("jti")
+        videoConfig.layerList = listOf(PeerConnection.VideoLayer().apply {
+                codec = PeerConnection.VIDEO_CODEC_H264
+                profileId = 0x42
+                level = 31
+            }).toTypedArray()
+
+        val offer = try {
+            peerConnection.initPublishOffer(
+                PeerConnection.OfferConfig(),
+                videoConfig,
+                null
+            )
+        } catch (x: Exception) {
+            Util.toast(this, R.string.sdp_offer_error, x.message)
+            return
+        }
+
+        // offer = Util.loadRawResource(this, R.raw.pub_offer_chrome_v_only)
+
         val request = Request.Builder().apply {
             url(server)
             method("POST", offer.toRequestBody("application/sdp".toMediaType()))
@@ -148,7 +174,7 @@ class MainActivity : Activity() {
         HttpClient.execute(request, object : HttpClient.Callback {
             override fun onCompleted(response: Response?, data: ByteArray?, error: Exception?) {
                 if (error != null) {
-                    Util.toast(this@MainActivity, R.string.sdp_offer_error, error.toString())
+                    Util.toast(this@MainActivity, R.string.sdp_offer_error, error.message)
                     return
                 }
 

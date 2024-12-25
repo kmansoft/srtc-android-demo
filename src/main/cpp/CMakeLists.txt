@@ -11,6 +11,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
 add_library(srtctest
         SHARED
+        jni_class_map.h
+        jni_class_map.cpp
+        jni_error.h
+        jni_error.cpp
+        jni_package.h
+        jni_peer_connection.h
+        jni_peer_connection.cpp
         srtctest_main.cpp)
 
 target_link_libraries(srtctest
