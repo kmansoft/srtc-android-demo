@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Base64
 import android.util.Log
 import android.view.KeyEvent
@@ -128,6 +129,7 @@ class MainActivity : Activity() {
             header("Authorization", "Bearer $token")
         }.build()
 
+        val ms0 = SystemClock.elapsedRealtime()
         HttpClient.execute(request, object : HttpClient.Callback {
             override fun onCompleted(response: Response?, data: ByteArray?, error: Exception?) {
                 if (error != null) {
@@ -136,6 +138,9 @@ class MainActivity : Activity() {
                 }
 
                 if (data != null) {
+                    val ms1 = SystemClock.elapsedRealtime()
+                    Util.toast(this@MainActivity, R.string.sdp_offer_received_sdp_answer, ms1 - ms0)
+
                     val answer = String(data, StandardCharsets.UTF_8)
                     MyLog.i(TAG, "SDP answer:\n%s", answer)
                 }

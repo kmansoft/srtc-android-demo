@@ -12,4 +12,5 @@
     <string name="error_parsing_claims">Error parsing token claims: %s</string>
 
     <string name="sdp_offer_error">SDP offer error: %s</string>
+    <string name="sdp_offer_received_sdp_answer">Received SDP answer in %d ms</string>
 </resources>
