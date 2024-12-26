@@ -5,9 +5,6 @@ import androidx.annotation.Nullable;
 
 import org.kman.srtctest.util.MyLog;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class PeerConnection {
 
     public PeerConnection() {
@@ -29,9 +26,9 @@ public class PeerConnection {
      * Definitions for createPublishOffer
      */
 
-    public static final int VIDEO_CODEC_H264 = 0;
+    public static final int VIDEO_CODEC_H264 = 1;
 
-    public static final int AUDIO_CODEC_OPUS = 0;
+    public static final int AUDIO_CODEC_OPUS = 1;
 
     public static class OfferConfig {
         @NonNull
@@ -68,6 +65,12 @@ public class PeerConnection {
         }
     }
 
+    public void setPublishAnswer(@NonNull String answer) throws RtcException {
+        synchronized (mLock) {
+            setPublishAnswerImpl(mHandle, answer);
+        }
+    }
+
     static {
         System.loadLibrary("srtctest");
     }
@@ -82,6 +85,9 @@ public class PeerConnection {
                                                @NonNull OfferConfig config,
                                                @NonNull VideoConfig video,
                                                @Nullable AudioConfig audio) throws RtcException;
+
+    private native void setPublishAnswerImpl(long handle,
+                                             @NonNull String answer) throws RtcException;
 
     private final Object mLock = new Object();
     private long mHandle;

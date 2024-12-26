@@ -1,5 +1,5 @@
 #include "jni_error.h"
-#include "jni_package.h"
+#include "jni_util.h"
 #include "jni_class_map.h"
 
 namespace {

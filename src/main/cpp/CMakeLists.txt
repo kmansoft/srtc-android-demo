@@ -15,7 +15,8 @@ add_library(srtctest
         jni_class_map.cpp
         jni_error.h
         jni_error.cpp
-        jni_package.h
+        jni_util.h
+        jni_util.cpp
         jni_peer_connection.h
         jni_peer_connection.cpp
         srtctest_main.cpp)

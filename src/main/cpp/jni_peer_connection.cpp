@@ -1,8 +1,9 @@
 #include "srtc/peer_connection.h"
+#include "srtc/sdp_answer.h"
 #include "srtc/sdp_offer.h"
 
 #include "jni_class_map.h"
-#include "jni_package.h"
+#include "jni_util.h"
 #include "jni_peer_connection.h"
 #include "jni_error.h"
 
@@ -39,8 +40,6 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
                                                                jlong handle, jobject config,
                                                                jobject video, jobject audio)
 {
-    const auto ptr = reinterpret_cast<srtc::PeerConnection*>(handle);
-
     const srtc::OfferConfig offerConfig {
         .cname = gClassOfferConfig.getFieldString(env, config, "cname")
     };
@@ -72,9 +71,27 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
         return nullptr;
     }
 
+    const auto ptr = reinterpret_cast<srtc::PeerConnection*>(handle);
     ptr->setSdpOffer(offer);
 
     return env->NewStringUTF(outSdpOffer.c_str());
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobject thiz, jlong handle,
+                                                               jstring answer)
+{
+    std::shared_ptr<srtc::SdpAnswer> outAnswer;
+    const auto answerStr = srtc::android::fromJavaString(env, answer);
+    const auto error = srtc::SdpAnswer::parse(answerStr, outAnswer);
+    if (error.isError()) {
+        srtc::android::JavaError::throwException(env, error);
+        return;
+    }
+
+    const auto ptr = reinterpret_cast<srtc::PeerConnection*>(handle);
+    ptr->setSdpAnswer(outAnswer);
 }
 
 namespace srtc::android {

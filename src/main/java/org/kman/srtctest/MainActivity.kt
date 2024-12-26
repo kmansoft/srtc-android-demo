@@ -155,7 +155,7 @@ class MainActivity : Activity() {
 
         val offer = try {
             peerConnection.initPublishOffer(
-                PeerConnection.OfferConfig(),
+                offerConfig,
                 videoConfig,
                 null
             )
@@ -186,6 +186,8 @@ class MainActivity : Activity() {
 
                     val answer = String(data, StandardCharsets.UTF_8)
                     MyLog.i(TAG, "SDP answer:\n%s", answer)
+
+                    mPeerConnection?.setPublishAnswer(answer)
                 }
             }
         })
