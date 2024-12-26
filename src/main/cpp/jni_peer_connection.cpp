@@ -1,6 +1,7 @@
 #include "srtc/peer_connection.h"
 #include "srtc/sdp_answer.h"
 #include "srtc/sdp_offer.h"
+#include "srtc/track.h"
 
 #include "jni_class_map.h"
 #include "jni_util.h"
@@ -11,6 +12,8 @@
 
 namespace {
 
+srtc::android::ClassMap gClassPeerConnection;
+srtc::android::ClassMap gClassTrack;
 srtc::android::ClassMap gClassOfferConfig;
 srtc::android::ClassMap gClassVideoLayer;
 srtc::android::ClassMap gClassVideoConfig;
@@ -50,7 +53,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
     for (jsize i = 0; i < env->GetArrayLength(layerListJni); i += 1) {
         const auto layerJni = env->GetObjectArrayElement(layerListJni, i);
         layerList.push_back(srtc::VideoLayer {
-            .codec = static_cast<srtc::VideoCodec>(gClassVideoLayer.getFieldInt(env, layerJni, "codec")),
+            .codec = static_cast<srtc::Codec>(gClassVideoLayer.getFieldInt(env, layerJni, "codec")),
             .profileId = static_cast<uint32_t>(gClassVideoLayer.getFieldInt(env, layerJni, "profileId")),
             .level = static_cast<uint32_t>(gClassVideoLayer.getFieldInt(env, layerJni, "level"))
         });
@@ -92,12 +95,38 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
 
     const auto ptr = reinterpret_cast<srtc::PeerConnection*>(handle);
     ptr->setSdpAnswer(outAnswer);
+
+    const auto videoTrack = ptr->getVideoTrack();
+    const auto audioTrack = ptr->getAudioTrack();
+
+    jobject videoTrackJ = nullptr;
+    if (videoTrack) {
+        videoTrackJ = gClassTrack.newObject(env, videoTrack->getTrackId(), videoTrack->getPayloadType(),
+                                            static_cast<jint>(videoTrack->getCodec()),
+                                            videoTrack->getProfileId(), videoTrack->getLevel());
+    }
+    gClassPeerConnection.setFieldObject(env, thiz, "mVideoTrack", videoTrackJ);
+
+    jobject audioTrackJ = nullptr;
+    if (audioTrack) {
+        audioTrackJ = gClassTrack.newObject(env, audioTrack->getTrackId(), audioTrack->getPayloadType(),
+                                            static_cast<jint>(audioTrack->getCodec()),
+                                            audioTrack->getProfileId(), audioTrack->getLevel());
+    }
+    gClassPeerConnection.setFieldObject(env, thiz, "mAudioTrack", audioTrackJ);
 }
 
 namespace srtc::android {
 
 void PeerConnection::initializeJNI(JNIEnv *env)
 {
+    gClassPeerConnection.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection")
+            .findField(env, "mVideoTrack", "L" SRTC_PACKAGE_NAME "/Track;")
+            .findField(env, "mAudioTrack", "L" SRTC_PACKAGE_NAME "/Track;");
+
+    gClassTrack.findClass(env, SRTC_PACKAGE_NAME "/Track")
+            .findMethod(env, "<init>", "(IIIII)V");
+
     gClassOfferConfig.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$OfferConfig")
             .findField(env, "cname", "Ljava/lang/String;");
 

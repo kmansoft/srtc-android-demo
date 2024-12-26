@@ -28,7 +28,7 @@ public class PeerConnection {
 
     public static final int VIDEO_CODEC_H264 = 1;
 
-    public static final int AUDIO_CODEC_OPUS = 1;
+    public static final int AUDIO_CODEC_OPUS = 100;
 
     public static class OfferConfig {
         @NonNull
@@ -71,6 +71,18 @@ public class PeerConnection {
         }
     }
 
+    public Track getVideoTrack() {
+        synchronized (mLock) {
+            return mVideoTrack;
+        }
+    }
+
+    public Track getAudioTrack() {
+        synchronized (mLock) {
+            return mAudioTrack;
+        }
+    }
+
     static {
         System.loadLibrary("srtctest");
     }
@@ -91,4 +103,6 @@ public class PeerConnection {
 
     private final Object mLock = new Object();
     private long mHandle;
+    private Track mVideoTrack;
+    private Track mAudioTrack;
 }

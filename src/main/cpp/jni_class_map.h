@@ -19,6 +19,8 @@ public:
     jobjectArray getFieldObjectArray(JNIEnv* env, jobject obj, const char* name) const;
     jint getFieldInt(JNIEnv* env, jobject obj, const char* name) const;
 
+    void setFieldObject(JNIEnv* env, jobject obj, const char* name, jobject value);
+
     jobject newObject(JNIEnv* env, ...);
 
 private:

@@ -188,6 +188,12 @@ class MainActivity : Activity() {
                     MyLog.i(TAG, "SDP answer:\n%s", answer)
 
                     mPeerConnection?.setPublishAnswer(answer)
+
+                    val videoTrack = mPeerConnection?.videoTrack
+                    val audioTrack = mPeerConnection?.audioTrack;
+
+                    MyLog.i(TAG, "Video track: %s", videoTrack)
+                    MyLog.i(TAG, "Audio track: %s", audioTrack)
                 }
             }
         })

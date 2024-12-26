@@ -78,6 +78,14 @@ jint ClassMap::getFieldInt(JNIEnv *env, jobject obj, const char* name) const
     return env->GetIntField(obj, iter->second);
 }
 
+void ClassMap::setFieldObject(JNIEnv* env, jobject obj, const char* name, jobject value)
+{
+    const auto iter = mFieldMap.find(name);
+    assert(iter != mFieldMap.end());
+
+    env->SetObjectField(obj, iter->second, value);
+}
+
 jobject ClassMap::newObject(JNIEnv* env, ...)
 {
     const auto iter = mMethodMap.find("<init>");
