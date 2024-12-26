@@ -34,6 +34,8 @@ public class PeerConnection {
     public static final int AUDIO_CODEC_OPUS = 0;
 
     public static class OfferConfig {
+        @NonNull
+        public String cname = "";
     }
 
     public static class VideoLayer {
@@ -49,8 +51,6 @@ public class PeerConnection {
     }
 
     public static class VideoConfig {
-        @NonNull
-        public String cname = "";
         @NonNull
         public VideoLayer[] layerList = new VideoLayer[0];
     }

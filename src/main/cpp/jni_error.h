@@ -6,7 +6,7 @@
 
 namespace srtc::android {
 
-class Error {
+class JavaError {
 public:
     static void initializeJNI(JNIEnv* env);
 

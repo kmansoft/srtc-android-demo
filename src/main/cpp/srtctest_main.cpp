@@ -12,7 +12,7 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
     vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6);
 
     PeerConnection::initializeJNI(env);
-    Error::initializeJNI(env);
+    JavaError::initializeJNI(env);
 
     return JNI_VERSION_1_6;
 }

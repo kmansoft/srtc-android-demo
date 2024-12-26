@@ -136,15 +136,17 @@ class MainActivity : Activity() {
         // And create a new one
         mPeerConnection = PeerConnection()
 
-        // test code
+        // Create the SDP offer
         val claims = token.split('.')[1]
         val decoded = Base64.decode(claims, Base64.NO_PADDING)
         val json = JSONObject(String(decoded, StandardCharsets.UTF_8))
 
         val peerConnection = requireNotNull(mPeerConnection)
 
+        val offerConfig = PeerConnection.OfferConfig()
+        offerConfig.cname = json.getString("jti")
+
         val videoConfig = PeerConnection.VideoConfig()
-        videoConfig.cname = json.getString("jti")
         videoConfig.layerList = listOf(PeerConnection.VideoLayer().apply {
                 codec = PeerConnection.VIDEO_CODEC_H264
                 profileId = 0x42

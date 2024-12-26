@@ -14,7 +14,8 @@ object HttpClient {
         fun onCompleted(response: Response?, data: ByteArray?, error: Exception?)
     }
 
-    class StatusCodeException(val code: Int) : Exception() {}
+    class StatusCodeException(val code: Int) : Exception("HTTP status code $code") {
+    }
 
     fun execute(request: Request, callback: Callback) {
         mExecutor.submit {

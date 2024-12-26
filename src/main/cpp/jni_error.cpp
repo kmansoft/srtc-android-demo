@@ -10,7 +10,7 @@ srtc::android::ClassMap gClassOfferException;
 
 namespace srtc::android {
 
-void Error::initializeJNI(JNIEnv* env)
+void JavaError::initializeJNI(JNIEnv* env)
 {
 
     gClassOfferException.findClass(env, SRTC_PACKAGE_NAME "/RtcException")
@@ -18,7 +18,7 @@ void Error::initializeJNI(JNIEnv* env)
 
 }
 
-void Error::throwException(JNIEnv* env, const srtc::Error& error)
+void JavaError::throwException(JNIEnv* env, const srtc::Error& error)
 {
     const auto message = env->NewStringUTF(error.mMessage.c_str());
     const auto exc = gClassOfferException.newObject(env,

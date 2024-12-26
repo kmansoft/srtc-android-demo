@@ -42,10 +42,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
     const auto ptr = reinterpret_cast<srtc::PeerConnection*>(handle);
 
     const srtc::OfferConfig offerConfig {
-    };
-
-    const srtc::VideoConfig videoConfig {
-        .cname = gClassVideoConfig.getFieldString(env, video, "cname")
+        .cname = gClassOfferConfig.getFieldString(env, config, "cname")
     };
 
     std::vector<srtc::VideoLayer> layerList;
@@ -60,6 +57,10 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
         });
     }
 
+    const srtc::VideoConfig videoConfig {
+        .layerList = layerList
+    };
+
     std::string outSdpOffer;
 
     const auto offer = std::make_shared<srtc::SdpOffer>(offerConfig, videoConfig, std::nullopt);
@@ -67,7 +68,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
 
     if (error.isError()) {
         // Throw an exception
-        srtc::android::Error::throwException(env, error);
+        srtc::android::JavaError::throwException(env, error);
         return nullptr;
     }
 
@@ -80,7 +81,8 @@ namespace srtc::android {
 
 void PeerConnection::initializeJNI(JNIEnv *env)
 {
-    gClassOfferConfig.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$OfferConfig");
+    gClassOfferConfig.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$OfferConfig")
+            .findField(env, "cname", "Ljava/lang/String;");
 
     gClassVideoLayer.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$VideoLayer")
             .findField(env, "codec", "I")
@@ -88,7 +90,6 @@ void PeerConnection::initializeJNI(JNIEnv *env)
             .findField(env, "level", "I");
 
     gClassVideoConfig.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$VideoConfig")
-            .findField(env, "cname", "Ljava/lang/String;")
             .findField(env, "layerList", "[L" SRTC_PACKAGE_NAME "/PeerConnection$VideoLayer;");
 
     gClassAudioConfig.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$AudioConfig")
