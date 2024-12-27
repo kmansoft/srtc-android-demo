@@ -19,9 +19,15 @@ add_library(srtctest
         jni_util.cpp
         jni_peer_connection.h
         jni_peer_connection.cpp
-        srtctest_main.cpp)
+        srtctest_main.cpp
+)
 
 target_link_libraries(srtctest
         srtc
         android
-        log)
+        log
+)
+
+target_link_libraries(
+        srtctest
+)
