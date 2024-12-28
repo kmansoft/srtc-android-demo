@@ -1,6 +1,6 @@
 #/bin/bash
 
-TOKEN=$(aws ivs-realtime create-participant-token --duration 1440 --stage-arn arn:aws:ivs:us-west-2:422437114350:stage/1nM0M3foFyNa | jq -r ".participantToken.token")
+TOKEN=$(aws ivs-realtime create-participant-token --duration 1440 --stage-arn arn:aws:ivs:us-west-2:422437114350:stage/1nM0M3foFyNa --output json | jq -r ".participantToken.token")
 
 if [ -z "$TOKEN" ]
 then

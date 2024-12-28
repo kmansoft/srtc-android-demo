@@ -111,6 +111,7 @@ void start_client(char *remote_address, char *local_address, int port) {
 	ctx = SSL_CTX_new(DTLS_client_method());
 	//SSL_CTX_set_cipher_list(ctx, "eNULL:!MD5");
 
+	SSL_CTX_set_min_proto_version(ctx, DTLS1_VERSION);
 
 	// kostya begin
     EVP_PKEY* pkey = EVP_PKEY_new();
@@ -167,6 +168,9 @@ void start_client(char *remote_address, char *local_address, int port) {
 
 	ssl = SSL_new(ctx);
 
+	SSL_set_tlsext_use_srtp(
+		        ssl, "SRTP_AEAD_AES_256_GCM:SRTP_AEAD_AES_128_GCM:SRTP_AES128_CM_SHA1_80");
+
 	printf("Created ssl\n");
 
 	/* Create BIO, connect and set to already connected */
@@ -186,7 +190,7 @@ void start_client(char *remote_address, char *local_address, int port) {
 
 	printf("Connecting...\n");
 
-	retval = SSL_connect(ssl);
+	retval = SSL_do_handshake(ssl);
 	if (retval <= 0) {
 		switch (SSL_get_error(ssl, retval)) {
 			case SSL_ERROR_ZERO_RETURN:
