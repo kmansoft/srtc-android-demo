@@ -14,4 +14,4 @@ TOKEN_SIGNTR=$(echo "$TOKEN" | cut -d '.' -f 3)
 
 echo "$TOKEN_CLAIMS" | base64 -d | jq
 
-adb -e shell am start -a "android.intent.action.VIEW" -d "srtc://ignored/?header=$TOKEN_HEADER\&claims=$TOKEN_CLAIMS\&signature=$TOKEN_SIGNTR" org.kman.srtctest/.MainActivity
+adb -e shell am start -a "android.intent.action.VIEW" -d "srtc://ivs/?header=$TOKEN_HEADER\&claims=$TOKEN_CLAIMS\&signature=$TOKEN_SIGNTR" org.kman.srtctest/.MainActivity

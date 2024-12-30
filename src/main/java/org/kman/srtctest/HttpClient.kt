@@ -25,6 +25,7 @@ object HttpClient {
                 while (true) {
                     mClient.newCall(req).execute().use { response ->
                         if (response.isRedirect) {
+                            val code = response.code
                             val newUrl = response.headers["Location"]
                             if (newUrl.isNullOrEmpty()) {
                                 mMainHandler.post {
@@ -40,8 +41,6 @@ object HttpClient {
                                 headers(request.headers)
                             }.build()
                         } else if (!response.isSuccessful) {
-                            val data = response.body?.string()
-
                             mMainHandler.post {
                                 callback.onCompleted(
                                     response, null, StatusCodeException(response.code)

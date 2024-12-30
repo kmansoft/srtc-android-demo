@@ -66,7 +66,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
     std::string outSdpOffer;
 
     const auto offer = std::make_shared<srtc::SdpOffer>(offerConfig, videoConfig, std::nullopt);
-    const auto error = offer->generate(outSdpOffer);
+    const auto [ offerStr, error ] = offer->generate();
 
     if (error.isError()) {
         // Throw an exception
@@ -77,7 +77,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
     const auto ptr = reinterpret_cast<srtc::PeerConnection*>(handle);
     ptr->setSdpOffer(offer);
 
-    return env->NewStringUTF(outSdpOffer.c_str());
+    return env->NewStringUTF(offerStr.c_str());
 }
 
 extern "C"

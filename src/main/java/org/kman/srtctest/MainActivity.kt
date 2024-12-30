@@ -79,31 +79,35 @@ class MainActivity : Activity() {
         val scheme = data.scheme ?: return
         if (scheme != "srtc") return
 
-        val header = data.getQueryParameter("header") ?: return
-        val claims = data.getQueryParameter("claims") ?: return
-        val signature = data.getQueryParameter("signature") ?: return
+        val host = data.host ?: return
 
-        try {
-            val decoded = Base64.decode(claims, Base64.NO_PADDING)
-            val json = JSONObject(String(decoded, StandardCharsets.UTF_8))
+        if (host == "ivs") {
+            val header = data.getQueryParameter("header") ?: return
+            val claims = data.getQueryParameter("claims") ?: return
+            val signature = data.getQueryParameter("signature") ?: return
 
-            var server = json.getString("whip_url")
-            val participantId = json.getString("jti")
-            val token = "${header}.${claims}.${signature}"
+            try {
+                val decoded = Base64.decode(claims, Base64.NO_PADDING)
+                val json = JSONObject(String(decoded, StandardCharsets.UTF_8))
 
-            if (server.isNotEmpty() && participantId.isNotEmpty()) {
-                server = "${server}/publish/${participantId}"
+                var server = json.getString("whip_url")
+                val participantId = json.getString("jti")
+                val token = "${header}.${claims}.${signature}"
+
+                if (server.isNotEmpty() && participantId.isNotEmpty()) {
+                    server = "${server}/publish/${participantId}"
+                }
+                mEditWhipServer.setText(server)
+                mEditWhipToken.setText(token)
+
+                mSharedPrefs.edit().apply {
+                    putString(PREF_KEY_SERVER, server)
+                    putString(PREF_KEY_TOKEN, token)
+                }.apply()
+
+            } catch (x: Exception) {
+                Util.toast(this, R.string.error_parsing_claims, x.toString())
             }
-            mEditWhipServer.setText(server)
-            mEditWhipToken.setText(token)
-
-            mSharedPrefs.edit().apply {
-                putString(PREF_KEY_SERVER, server)
-                putString(PREF_KEY_TOKEN, token)
-            }.apply()
-
-        } catch (x: Exception) {
-            Util.toast(this, R.string.error_parsing_claims, x.toString())
         }
     }
 
