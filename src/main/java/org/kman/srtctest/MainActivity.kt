@@ -113,7 +113,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     setInteger(MediaFormat.KEY_BIT_RATE, 2500000)
                     setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
                     setInteger(MediaFormat.KEY_FRAME_RATE, 15)
-                    setInteger(MediaFormat.KEY_PROFILE, H264_PROFILE_ENCODER)
+                    setInteger(MediaFormat.KEY_PROFILE, findEncoderProfile(H264_PROFILE))
                     setInteger(MediaFormat.KEY_LEVEL, H264_LEVEL)
                 }
 
@@ -285,7 +285,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         val videoConfig = PeerConnection.VideoConfig()
         videoConfig.layerList = listOf(PeerConnection.VideoLayer().apply {
                 codec = PeerConnection.VIDEO_CODEC_H264
-                profileId = H264_PROFILE_RTC
+                profileId = H264_PROFILE
                 level = H264_LEVEL
             }).toTypedArray()
 
@@ -376,7 +376,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     }
 
     private fun onCameraError(camera: CameraDevice, error: Int) {
-         Util.toast(this, R.string.error_camera_open)
+         Util.toast(this, R.string.error_camera_open, error)
 
         mCamera?.close()
         mCamera = null
@@ -451,6 +451,13 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
 
         return null
+    }
+
+    private fun findEncoderProfile(profileId: Int): Int {
+        return when(profileId) {
+            0x42 -> MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline
+            else -> MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline
+        }
     }
 
     private val mMainHandler = Handler(Looper.getMainLooper())
@@ -547,8 +554,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
         private const val MIME_VIDEO_H264 = "video/avc"
 
-        private const val H264_PROFILE_RTC = 0x42
-        private const val H264_PROFILE_ENCODER = MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline
+        private const val H264_PROFILE = 0x42
         private const val H264_LEVEL = 31
     }
 }
