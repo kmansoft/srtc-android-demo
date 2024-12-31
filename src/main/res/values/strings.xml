@@ -15,6 +15,8 @@
     <string name="error_no_front_camera">Cannot find the front facing camera</string>
     <string name="error_camera_open">Error opening the camera: %d</string>
     <string name="error_camera_session_failed">Error creating a capture session</string>
+    <string name="error_no_encoder">Error finding the encoder</string>
+    <string name="error_starting_encoder">Error starting the encoder</string>
 
     <string name="sdp_offer_error">SDP offer error: %s</string>
     <string name="sdp_offer_received_sdp_answer">Received SDP answer in %d ms</string>

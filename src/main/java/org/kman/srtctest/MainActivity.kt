@@ -12,6 +12,10 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
+import android.media.MediaCodec
+import android.media.MediaCodecInfo
+import android.media.MediaCodecList
+import android.media.MediaFormat
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
@@ -63,12 +67,18 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         super.onDestroy()
 
         mSurfaceViewPreview.holder.removeCallback(this)
+        mPreviewSurface = null
 
         mPeerConnection?.release()
         mPeerConnection = null
 
         mCamera?.close()
         mCamera = null
+
+        mEncoder?.stop()
+        mEncoder?.release()
+        mEncoder = null
+        mEncoderInputSurface = null
 
         mMediaThread.quitSafely()
     }
@@ -88,6 +98,45 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
     override fun onPostResume() {
         super.onPostResume()
+
+        if (mEncoder == null) {
+            val codecMime = MIME_VIDEO_H264
+            val codecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
+            val codecInfo = findEncoder(codecList, codecMime, false) ?:
+                findEncoder(codecList, codecMime, true)
+            if (codecInfo == null) {
+                Util.toast(this, R.string.error_no_encoder)
+            } else {
+                MyLog.i(TAG, "Encoder for %s: %s", codecMime, codecInfo.name)
+
+                val format = MediaFormat.createVideoFormat(codecMime, 1280, 720).apply {
+                    setInteger(MediaFormat.KEY_BIT_RATE, 2500000)
+                    setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
+                    setInteger(MediaFormat.KEY_FRAME_RATE, 15)
+                    setInteger(MediaFormat.KEY_PROFILE, H264_PROFILE_ENCODER)
+                    setInteger(MediaFormat.KEY_LEVEL, H264_LEVEL)
+                }
+
+                mEncoder = MediaCodec.createByCodecName(codecInfo.name)
+                mEncoder?.setCallback(mEncoderCallback)
+
+                try {
+                    mEncoder?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+
+                    mEncoderInputSurface = mEncoder?.createInputSurface()
+
+                    mEncoder?.start()
+                } catch (x: Exception) {
+                    Util.toast(this, R.string.error_starting_encoder)
+
+                    MyLog.i(TAG, "Error configuring the encoder: %s", x.message)
+
+                    mEncoder?.release()
+                    mEncoder = null
+                    mEncoderInputSurface = null
+                }
+            }
+        }
 
         if (!hasPermissions()) {
             requestPermissions(arrayOf(PERM_CAMERA, PERM_RECORD_AUDIO), 1)
@@ -236,8 +285,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         val videoConfig = PeerConnection.VideoConfig()
         videoConfig.layerList = listOf(PeerConnection.VideoLayer().apply {
                 codec = PeerConnection.VIDEO_CODEC_H264
-                profileId = 0x42
-                level = 31
+                profileId = H264_PROFILE_RTC
+                level = H264_LEVEL
             }).toTypedArray()
 
         val offer = try {
@@ -277,7 +326,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     mPeerConnection?.setPublishAnswer(answer)
 
                     val videoTrack = mPeerConnection?.videoTrack
-                    val audioTrack = mPeerConnection?.audioTrack;
+                    val audioTrack = mPeerConnection?.audioTrack
 
                     MyLog.i(TAG, "Video track: %s", videoTrack)
                     MyLog.i(TAG, "Audio track: %s", audioTrack)
@@ -380,7 +429,28 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mPreviewSurface?.also {
             surfaceList.add(it)
         }
+        mEncoderInputSurface?.also {
+            surfaceList.add(it)
+        }
         return surfaceList
+    }
+
+    private fun findEncoder(codecList: MediaCodecList,
+                            mimeType: String,
+                            allowSoftware: Boolean) : MediaCodecInfo? {
+        for (info in codecList.codecInfos) {
+            if (info.isEncoder) {
+                if (allowSoftware || info.isHardwareAccelerated) {
+                    for (type in info.supportedTypes) {
+                        if (type == mimeType) {
+                            return info
+                        }
+                    }
+                }
+            }
+        }
+
+        return null
     }
 
     private val mMainHandler = Handler(Looper.getMainLooper())
@@ -400,6 +470,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private var mIsInitCameraDone = false
     private var mCamera: CameraDevice? = null
     private var mCameraSession: CameraCaptureSession? = null
+
+    private var mEncoder: MediaCodec? = null
+    private var mEncoderInputSurface: Surface? = null
 
     private val mCameraStateCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(camera: CameraDevice) {
@@ -429,6 +502,40 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
     }
 
+    private val mEncoderCallback = object : MediaCodec.Callback() {
+        override fun onInputBufferAvailable(codec: MediaCodec, index: Int) {
+        }
+
+        override fun onOutputBufferAvailable(
+            codec: MediaCodec,
+            index: Int,
+            info: MediaCodec.BufferInfo
+        ) {
+            val buffer = codec.getOutputBuffer(index) ?: return
+
+            val isKeyFrame = (info.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0
+
+            MyLog.i(TAG, "Encoder frame: key = %b, %d bytes", isKeyFrame, buffer.limit())
+
+            codec.releaseOutputBuffer(index, false)
+        }
+
+        override fun onError(codec: MediaCodec, e: MediaCodec.CodecException) {
+        }
+
+        override fun onOutputFormatChanged(codec: MediaCodec, format: MediaFormat) {
+            val csd0 = format.getByteBuffer("csd-0")
+            val csd1 = format.getByteBuffer("csd-1")
+
+            if (csd0 != null) {
+                MyLog.i(TAG,"Encoder format csd0: %d bytes", csd0.limit())
+            }
+            if (csd1 != null) {
+                MyLog.i(TAG,"Encoder format csd1: %d bytes", csd1.limit())
+            }
+        }
+    }
+
     companion object {
         private const val TAG = "MainActivity"
 
@@ -437,5 +544,11 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
         private const val PERM_CAMERA = android.Manifest.permission.CAMERA
         private const val PERM_RECORD_AUDIO =  android.Manifest.permission.RECORD_AUDIO
+
+        private const val MIME_VIDEO_H264 = "video/avc"
+
+        private const val H264_PROFILE_RTC = 0x42
+        private const val H264_PROFILE_ENCODER = MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline
+        private const val H264_LEVEL = 31
     }
 }
