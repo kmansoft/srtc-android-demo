@@ -11,6 +11,11 @@
 
     <string name="error_parsing_claims">Error parsing token claims: %s</string>
 
+    <string name="error_no_permissions">No permissions for camera and audio</string>
+    <string name="error_no_front_camera">Cannot find the front facing camera</string>
+    <string name="error_camera_open">Error opening the camera: %d</string>
+    <string name="error_camera_session_failed">Error creating a capture session</string>
+
     <string name="sdp_offer_error">SDP offer error: %s</string>
     <string name="sdp_offer_received_sdp_answer">Received SDP answer in %d ms</string>
 </resources>
