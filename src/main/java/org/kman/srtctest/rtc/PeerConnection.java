@@ -1,5 +1,8 @@
 package org.kman.srtctest.rtc;
 
+import android.os.Handler;
+import android.os.Looper;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -23,7 +26,7 @@ public class PeerConnection {
     }
 
     /*
-     * Definitions for createPublishOffer
+     * Definitions for publish offer and answer
      */
 
     public static final int VIDEO_CODEC_H264 = 1;
@@ -59,13 +62,13 @@ public class PeerConnection {
     @NonNull
     public String initPublishOffer(@NonNull OfferConfig config,
                                    @NonNull VideoConfig video,
-                                   @Nullable AudioConfig audio) throws RtcException {
+                                   @Nullable AudioConfig audio) throws SRtcException {
         synchronized (mLock) {
             return initPublishOfferImpl(mHandle, config, video, audio);
         }
     }
 
-    public void setPublishAnswer(@NonNull String answer) throws RtcException {
+    public void setPublishAnswer(@NonNull String answer) throws SRtcException {
         synchronized (mLock) {
             setPublishAnswerImpl(mHandle, answer);
         }
@@ -83,6 +86,24 @@ public class PeerConnection {
         }
     }
 
+    // Connection state
+
+    public static final int CONNECTION_STATE_NONE = 0;
+    public static final int CONNECTION_STATE_CONNECTING = 1;
+    public static final int CONNECTION_STATE_CONNECTED = 2;
+    public static final int CONNECTION_STATE_FAILED = 100;
+    public static final int CONNECTION_STATE_CLOSED = 200;
+
+    public interface ConnectionStateListener {
+        void onConnectionState(int state);
+    }
+
+    public void setConnectionStateListener(ConnectionStateListener listener) {
+        synchronized (mLock) {
+            mConnectionStateListener = listener;
+        }
+    }
+
     static {
         System.loadLibrary("srtctest");
     }
@@ -96,13 +117,27 @@ public class PeerConnection {
     private native String initPublishOfferImpl(long handle,
                                                @NonNull OfferConfig config,
                                                @NonNull VideoConfig video,
-                                               @Nullable AudioConfig audio) throws RtcException;
+                                               @Nullable AudioConfig audio) throws SRtcException;
 
     private native void setPublishAnswerImpl(long handle,
-                                             @NonNull String answer) throws RtcException;
+                                             @NonNull String answer) throws SRtcException;
 
+    void fromNativeOnConnectionState(int state) {
+        mMainHandler.post(() -> {
+           synchronized (mLock) {
+               if (mConnectionStateListener != null) {
+                   mConnectionStateListener.onConnectionState(state);
+               }
+           }
+        });
+    }
+
+    private final Handler mMainHandler = new Handler(Looper.getMainLooper());
     private final Object mLock = new Object();
+
     private long mHandle;
     private Track mVideoTrack;
     private Track mAudioTrack;
+
+    private ConnectionStateListener mConnectionStateListener;
 }

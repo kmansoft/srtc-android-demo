@@ -1,12 +1,21 @@
 #pragma once
 
+#include <memory>
+#include "srtc/peer_connection.h"
+
 #include <jni.h>
 
 namespace srtc::android {
 
-class PeerConnection {
+class JavaPeerConnection {
 public:
     static void initializeJNI(JNIEnv* env);
+
+    JavaPeerConnection(jobject thiz);
+    ~JavaPeerConnection();
+
+    const jobject mThiz;
+    const std::unique_ptr<PeerConnection> mConn;
 };
 
 }

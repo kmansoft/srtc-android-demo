@@ -25,7 +25,10 @@ extern "C"
 JNIEXPORT jlong JNICALL
 Java_org_kman_srtctest_rtc_PeerConnection_createImpl(JNIEnv* env, jobject thiz)
 {
-    const auto ptr = new srtc::PeerConnection();
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "MemoryLeak"
+    const auto ptr = new srtc::android::JavaPeerConnection(env->NewGlobalRef(thiz));
+#pragma clang diagnostic pop
     return reinterpret_cast<jlong>(ptr);
 }
 
@@ -33,7 +36,7 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_org_kman_srtctest_rtc_PeerConnection_releaseImpl(JNIEnv* env, jobject thiz, jlong handle)
 {
-    const auto ptr = reinterpret_cast<srtc::PeerConnection*>(handle);
+    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
     delete ptr;
 }
 
@@ -70,12 +73,12 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
 
     if (error.isError()) {
         // Throw an exception
-        srtc::android::JavaError::throwException(env, error);
+        srtc::android::JavaError::throwSRtcException(env, error);
         return nullptr;
     }
 
-    const auto ptr = reinterpret_cast<srtc::PeerConnection*>(handle);
-    ptr->setSdpOffer(offer);
+    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
+    ptr->mConn->setSdpOffer(offer);
 
     return env->NewStringUTF(offerStr.c_str());
 }
@@ -89,15 +92,15 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
     const auto answerStr = srtc::android::fromJavaString(env, answer);
     const auto error = srtc::SdpAnswer::parse(answerStr, outAnswer);
     if (error.isError()) {
-        srtc::android::JavaError::throwException(env, error);
+        srtc::android::JavaError::throwSRtcException(env, error);
         return;
     }
 
-    const auto ptr = reinterpret_cast<srtc::PeerConnection*>(handle);
-    ptr->setSdpAnswer(outAnswer);
+    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
+    ptr->mConn->setSdpAnswer(outAnswer);
 
-    const auto videoTrack = ptr->getVideoTrack();
-    const auto audioTrack = ptr->getAudioTrack();
+    const auto videoTrack = ptr->mConn->getVideoTrack();
+    const auto audioTrack = ptr->mConn->getAudioTrack();
 
     jobject videoTrackJ = nullptr;
     if (videoTrack) {
@@ -118,11 +121,12 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
 
 namespace srtc::android {
 
-void PeerConnection::initializeJNI(JNIEnv *env)
+void JavaPeerConnection::initializeJNI(JNIEnv *env)
 {
     gClassPeerConnection.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection")
             .findField(env, "mVideoTrack", "L" SRTC_PACKAGE_NAME "/Track;")
-            .findField(env, "mAudioTrack", "L" SRTC_PACKAGE_NAME "/Track;");
+            .findField(env, "mAudioTrack", "L" SRTC_PACKAGE_NAME "/Track;")
+            .findMethod(env, "fromNativeOnConnectionState", "(I)V");
 
     gClassTrack.findClass(env, SRTC_PACKAGE_NAME "/Track")
             .findMethod(env, "<init>", "(IIIII)V");
@@ -140,6 +144,22 @@ void PeerConnection::initializeJNI(JNIEnv *env)
 
     gClassAudioConfig.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$AudioConfig")
             .findField(env, "codec", "I");
+}
+
+JavaPeerConnection::JavaPeerConnection(jobject thiz)
+    : mThiz(thiz)
+    , mConn(std::make_unique<PeerConnection>())
+{
+    mConn->setConnectionStateListener([this](PeerConnection::ConnectionState state){
+        const auto env = getJNIEnv();
+        gClassPeerConnection.callVoidMethod(env, mThiz, "fromNativeOnConnectionState", static_cast<jint>(state));
+    });
+}
+
+JavaPeerConnection::~JavaPeerConnection()
+{
+    const auto env = getJNIEnv();
+    env->DeleteGlobalRef(mThiz);
 }
 
 }

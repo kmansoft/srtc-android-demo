@@ -13,12 +13,12 @@ namespace srtc::android {
 void JavaError::initializeJNI(JNIEnv* env)
 {
 
-    gClassOfferException.findClass(env, SRTC_PACKAGE_NAME "/RtcException")
+    gClassOfferException.findClass(env, SRTC_PACKAGE_NAME "/SRtcException")
         .findMethod(env, "<init>", "(ILjava/lang/String;)V");
 
 }
 
-void JavaError::throwException(JNIEnv* env, const srtc::Error& error)
+void JavaError::throwSRtcException(JNIEnv* env, const srtc::Error& error)
 {
     const auto message = env->NewStringUTF(error.mMessage.c_str());
     const auto exc = gClassOfferException.newObject(env,

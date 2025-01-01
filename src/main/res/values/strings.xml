@@ -17,7 +17,14 @@
     <string name="error_camera_session_failed">Error creating a capture session</string>
     <string name="error_no_encoder">Error finding the encoder</string>
     <string name="error_starting_encoder">Error starting the encoder</string>
+    <string name="error_unsupported_video_codec">Unsupported video codec: %d</string>
 
     <string name="sdp_offer_error">SDP offer error: %s</string>
     <string name="sdp_offer_received_sdp_answer">Received SDP answer in %d ms</string>
+
+    <string name="pc_connection_state">PeerConnection connect state: %s</string>
+    <string name="pc_state_connecting">Connecting</string>
+    <string name="pc_state_connected">Connected</string>
+    <string name="pc_state_failed">Failed</string>
+    <string name="pc_state_closed">Closed</string>
 </resources>

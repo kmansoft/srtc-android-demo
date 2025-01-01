@@ -21,6 +21,8 @@ public:
 
     void setFieldObject(JNIEnv* env, jobject obj, const char* name, jobject value);
 
+    void callVoidMethod(JNIEnv* env, jobject obj, const char* name...);
+
     jobject newObject(JNIEnv* env, ...);
 
 private:

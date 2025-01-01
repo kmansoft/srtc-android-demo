@@ -1,5 +1,9 @@
 package org.kman.srtctest.rtc;
 
+import androidx.annotation.NonNull;
+
+import java.util.Locale;
+
 public class Track {
 
     Track(int trackId,
@@ -32,6 +36,14 @@ public class Track {
 
     public int getLevel() {
         return mLevel;
+    }
+
+    @NonNull
+    @Override
+    public String toString() {
+        return String.format(Locale.US,
+                "Track(trackId=%d, payloadType=%d, codec=%d, profileId=%d, level=%d)",
+                mTrackId, mPayloadType, mCodec, mProfileId, mLevel);
     }
 
     private final int mTrackId;

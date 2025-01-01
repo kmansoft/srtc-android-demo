@@ -10,4 +10,7 @@ namespace srtc::android {
 
 std::string fromJavaString(JNIEnv* env, jstring str);
 
+void initJNIEnv(JavaVM* vm);
+JNIEnv* getJNIEnv();
+
 }

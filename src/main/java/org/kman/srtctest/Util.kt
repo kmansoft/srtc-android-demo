@@ -8,11 +8,17 @@ import java.nio.charset.StandardCharsets
 object Util {
 
     fun toast(context: Context, resId: Int) {
-        Toast.makeText(context, context.getString(resId), Toast.LENGTH_SHORT).show()
+        gCurrToast?.cancel()
+
+        gCurrToast = Toast.makeText(context, context.getString(resId), Toast.LENGTH_SHORT)
+        gCurrToast?.show()
     }
 
     fun toast(context: Context, resId: Int, arg0: Any?) {
-        Toast.makeText(context, context.getString(resId, arg0), Toast.LENGTH_SHORT).show()
+        gCurrToast?.cancel()
+
+        gCurrToast = Toast.makeText(context, context.getString(resId, arg0), Toast.LENGTH_SHORT)
+        gCurrToast?.show()
     }
 
     fun loadRawResource(context: Context, resId: Int): String {
@@ -32,4 +38,6 @@ object Util {
             return String(bos.toByteArray(), StandardCharsets.UTF_8)
         }
     }
+
+    private var gCurrToast: Toast? = null
 }

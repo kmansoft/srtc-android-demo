@@ -2,6 +2,7 @@
 
 #include "jni_peer_connection.h"
 #include "jni_error.h"
+#include "jni_util.h"
 
 extern "C"
 jint JNI_OnLoad(JavaVM *vm, void *reserved)
@@ -11,7 +12,9 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
     JNIEnv* env = nullptr;
     vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6);
 
-    PeerConnection::initializeJNI(env);
+    initJNIEnv(vm);
+
+    JavaPeerConnection::initializeJNI(env);
     JavaError::initializeJNI(env);
 
     return JNI_VERSION_1_6;

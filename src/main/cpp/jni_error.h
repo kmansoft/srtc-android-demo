@@ -10,7 +10,7 @@ class JavaError {
 public:
     static void initializeJNI(JNIEnv* env);
 
-    static void throwException(JNIEnv* env, const srtc::Error& error);
+    static void throwSRtcException(JNIEnv* env, const srtc::Error& error);
 };
 
 }

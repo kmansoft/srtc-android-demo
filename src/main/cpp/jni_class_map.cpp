@@ -86,6 +86,18 @@ void ClassMap::setFieldObject(JNIEnv* env, jobject obj, const char* name, jobjec
     env->SetObjectField(obj, iter->second, value);
 }
 
+void ClassMap::callVoidMethod(JNIEnv* env, jobject obj, const char* name...)
+{
+    const auto iter = mMethodMap.find(name);
+    assert(iter != mMethodMap.end());
+
+    va_list ap;
+    va_start(ap, name);
+    va_end(ap);
+
+    env->CallVoidMethodV(obj, iter->second, ap);
+}
+
 jobject ClassMap::newObject(JNIEnv* env, ...)
 {
     const auto iter = mMethodMap.find("<init>");
