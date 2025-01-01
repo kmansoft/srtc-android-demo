@@ -14,8 +14,8 @@ public:
     JavaPeerConnection(jobject thiz);
     ~JavaPeerConnection();
 
-    const jobject mThiz;
-    const std::unique_ptr<PeerConnection> mConn;
+    jobject mThiz;
+    std::unique_ptr<PeerConnection> mConn;
 };
 
 }

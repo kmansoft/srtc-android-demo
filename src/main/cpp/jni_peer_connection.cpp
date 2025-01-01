@@ -158,6 +158,8 @@ JavaPeerConnection::JavaPeerConnection(jobject thiz)
 
 JavaPeerConnection::~JavaPeerConnection()
 {
+    mConn.reset();
+
     const auto env = getJNIEnv();
     env->DeleteGlobalRef(mThiz);
 }

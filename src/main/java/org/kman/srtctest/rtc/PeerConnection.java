@@ -17,7 +17,7 @@ public class PeerConnection {
 
     public void release() {
         MyLog.i(TAG, "Release");
-        synchronized (mLock) {
+        synchronized (mHandleLock) {
             if (mHandle != 0L) {
                 releaseImpl(mHandle);
                 mHandle = 0L;
@@ -63,25 +63,25 @@ public class PeerConnection {
     public String initPublishOffer(@NonNull OfferConfig config,
                                    @NonNull VideoConfig video,
                                    @Nullable AudioConfig audio) throws SRtcException {
-        synchronized (mLock) {
+        synchronized (mHandleLock) {
             return initPublishOfferImpl(mHandle, config, video, audio);
         }
     }
 
     public void setPublishAnswer(@NonNull String answer) throws SRtcException {
-        synchronized (mLock) {
+        synchronized (mHandleLock) {
             setPublishAnswerImpl(mHandle, answer);
         }
     }
 
     public Track getVideoTrack() {
-        synchronized (mLock) {
+        synchronized (mHandleLock) {
             return mVideoTrack;
         }
     }
 
     public Track getAudioTrack() {
-        synchronized (mLock) {
+        synchronized (mHandleLock) {
             return mAudioTrack;
         }
     }
@@ -99,7 +99,7 @@ public class PeerConnection {
     }
 
     public void setConnectionStateListener(ConnectionStateListener listener) {
-        synchronized (mLock) {
+        synchronized (mListenerLock) {
             mConnectionStateListener = listener;
         }
     }
@@ -124,7 +124,7 @@ public class PeerConnection {
 
     void fromNativeOnConnectionState(int state) {
         mMainHandler.post(() -> {
-           synchronized (mLock) {
+           synchronized (mListenerLock) {
                if (mConnectionStateListener != null) {
                    mConnectionStateListener.onConnectionState(state);
                }
@@ -133,11 +133,12 @@ public class PeerConnection {
     }
 
     private final Handler mMainHandler = new Handler(Looper.getMainLooper());
-    private final Object mLock = new Object();
+    private final Object mHandleLock = new Object();
 
     private long mHandle;
     private Track mVideoTrack;
     private Track mAudioTrack;
 
+    private final Object mListenerLock = new Object();
     private ConnectionStateListener mConnectionStateListener;
 }
