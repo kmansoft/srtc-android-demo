@@ -40,6 +40,7 @@ import org.json.JSONObject
 import org.kman.srtctest.rtc.PeerConnection
 import org.kman.srtctest.util.MyLog
 import java.nio.charset.StandardCharsets
+import java.util.UUID
 
 class MainActivity : Activity(), SurfaceHolder.Callback {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -193,15 +194,26 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 mEditWhipServer.setText(server)
                 mEditWhipToken.setText(token)
 
-                mSharedPrefs.edit().apply {
-                    putString(PREF_KEY_SERVER, server)
-                    putString(PREF_KEY_TOKEN, token)
-                }.apply()
-
+                saveFieldsToPrefs(server, token);
             } catch (x: Exception) {
                 Util.toast(this, R.string.error_parsing_claims, x.toString())
             }
+        } else if (host == "pion") {
+            val server = data.getQueryParameter("server") ?: return
+            val token = data.getQueryParameter("token") ?: return
+
+            mEditWhipServer.setText(server)
+            mEditWhipToken.setText(token)
+
+            saveFieldsToPrefs(server, token);
         }
+    }
+
+    private fun saveFieldsToPrefs(server: String, token: String) {
+        mSharedPrefs.edit().apply {
+            putString(PREF_KEY_SERVER, server)
+            putString(PREF_KEY_TOKEN, token)
+        }.apply()
     }
 
     private fun onClickConnect() {
@@ -211,7 +223,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             mEditWhipServer.requestFocus()
             return
         }
-        if (!server.startsWith("https://")) {
+        if (!server.contains("://")) {
             mEditWhipServer.error = getString(R.string.error_server_invalid)
             mEditWhipServer.requestFocus()
             return
@@ -238,14 +250,10 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
 
         // Create the SDP offer
-        val claims = token.split('.')[1]
-        val decoded = Base64.decode(claims, Base64.NO_PADDING)
-        val json = JSONObject(String(decoded, StandardCharsets.UTF_8))
-
         val peerConnection = requireNotNull(mPeerConnection)
 
         val offerConfig = PeerConnection.OfferConfig()
-        offerConfig.cname = json.getString("jti")
+        offerConfig.cname = UUID.randomUUID().toString()
 
         val videoConfig = PeerConnection.VideoConfig()
         videoConfig.layerList = listOf(PeerConnection.VideoLayer().apply {
@@ -288,7 +296,12 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     val answer = String(data, StandardCharsets.UTF_8)
                     MyLog.i(TAG, "SDP answer:\n%s", answer)
 
-                    mPeerConnection?.setPublishAnswer(answer)
+                    try {
+                        mPeerConnection?.setPublishAnswer(answer)
+                    } catch (x: Exception) {
+                        Util.toast(this@MainActivity, R.string.error_remote_description, x.message)
+                        return
+                    }
 
                     onPublishSdpCompleted();
                 }

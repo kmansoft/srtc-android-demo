@@ -18,6 +18,7 @@
     <string name="error_no_encoder">Error finding the encoder</string>
     <string name="error_starting_encoder">Error starting the encoder</string>
     <string name="error_unsupported_video_codec">Unsupported video codec: %d</string>
+    <string name="error_remote_description">Error setting remote description: %s</string>
 
     <string name="sdp_offer_error">SDP offer error: %s</string>
     <string name="sdp_offer_received_sdp_answer">Received SDP answer in %d ms</string>

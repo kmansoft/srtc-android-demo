@@ -10,12 +10,42 @@
 </head>
 <body>
 <h1>WebRTC publish</h1>
+<div>
 <video id="preview" autoplay playsinline></video>
+</div>
+<div>
+<button id="publish" disabled>Publish</button>
+</div>
 </body>
 <script>
-async function publish() {
-	const elPreview = document.getElementById("preview");
+const kWhipUrl = 'http://localhost:8080/whip';
 
+const elPreview = document.getElementById('preview');
+const elPublish = document.getElementById('publish');
+
+const pc = new RTCPeerConnection();
+
+let offerString = '';
+
+async function publish() {
+	// Post to WHIP
+	const response = await fetch(kWhipUrl, {
+    	method: 'POST',
+    	headers: {
+      		'Authorization': 'Bearer something',
+      		'Content-Type': 'application/sdp'
+    	},
+    	body: offerString
+  	});
+	console.log(response);
+
+	const answer = await response.text();
+	console.log('Answer', answer);
+
+	pc.setRemoteDescription({ sdp: answer, type: 'answer'});
+}
+
+async function init() {
 	const videoMedia = await navigator.mediaDevices.getUserMedia(
 			{ video: { width: 1280, height: 720 } }
 		)
@@ -23,21 +53,26 @@ async function publish() {
 			{ audio: true }
 		)
 
-	console.log("Video media", videoMedia);
-	console.log("Audio media", audioMedia);
+	console.log('Video media', videoMedia);
+	console.log('Audio media', audioMedia);
 
 	elPreview.srcObject = videoMedia;
 
-	const pc = new RTCPeerConnection();
 	pc.addTrack(videoMedia.getTracks()[0]);
-	pc.addTrack(audioMedia.getTracks()[0]);
+//	pc.addTrack(audioMedia.getTracks()[0]);
 
 	const offer = await pc.createOffer();
+	await pc.setLocalDescription(offer);
 	console.log('Offer', offer.sdp);
+
+	offerString = offer.sdp;
+
+	elPublish.disabled = false;
+	elPublish.onclick = () => publish();
 }
 
 (async() => {
-  await publish();
+  await init();
 })();
 
 </script>
