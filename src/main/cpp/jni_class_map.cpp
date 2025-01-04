@@ -33,7 +33,6 @@ ClassMap& ClassMap::findMethod(JNIEnv* env, const char* name, const char* signat
     return *this;
 }
 
-
 ClassMap& ClassMap::findField(JNIEnv* env, const char* name, const char* type)
 {
     const auto f = env->GetFieldID(mClass, name, type);
@@ -96,6 +95,18 @@ void ClassMap::callVoidMethod(JNIEnv* env, jobject obj, const char* name...)
     va_end(ap);
 
     env->CallVoidMethodV(obj, iter->second, ap);
+}
+
+jint ClassMap::callIntMethod(JNIEnv* env, jobject obj, const char* name...)
+{
+    const auto iter = mMethodMap.find(name);
+    assert(iter != mMethodMap.end());
+
+    va_list ap;
+    va_start(ap, name);
+    va_end(ap);
+
+    return env->CallIntMethodV(obj, iter->second, ap);
 }
 
 jobject ClassMap::newObject(JNIEnv* env, ...)

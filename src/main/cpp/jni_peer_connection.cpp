@@ -12,6 +12,7 @@
 
 namespace {
 
+srtc::android::ClassMap gClassJavaIoByteBuffer;
 srtc::android::ClassMap gClassPeerConnection;
 srtc::android::ClassMap gClassTrack;
 srtc::android::ClassMap gClassOfferConfig;
@@ -90,14 +91,19 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
 {
     std::shared_ptr<srtc::SdpAnswer> outAnswer;
     const auto answerStr = srtc::android::fromJavaString(env, answer);
-    const auto error = srtc::SdpAnswer::parse(answerStr, outAnswer);
-    if (error.isError()) {
-        srtc::android::JavaError::throwSRtcException(env, error);
+
+    const auto error1 = srtc::SdpAnswer::parse(answerStr, outAnswer);
+    if (error1.isError()) {
+        srtc::android::JavaError::throwSRtcException(env, error1);
         return;
     }
 
     const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
-    ptr->mConn->setSdpAnswer(outAnswer);
+    const auto error2 = ptr->mConn->setSdpAnswer(outAnswer);
+    if (error2.isError()) {
+        srtc::android::JavaError::throwSRtcException(env, error2);
+        return;
+    }
 
     const auto videoTrack = ptr->mConn->getVideoTrack();
     const auto audioTrack = ptr->mConn->getAudioTrack();
@@ -119,10 +125,32 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
     gClassPeerConnection.setFieldObject(env, thiz, "mAudioTrack", audioTrackJ);
 }
 
+extern "C"
+JNIEXPORT void JNICALL
+Java_org_kman_srtctest_rtc_PeerConnection_publishVideoFrameImpl(JNIEnv *env, jobject thiz,
+                                                                jlong handle, jobject buf)
+{
+    const auto bufPtr = env->GetDirectBufferAddress(buf);
+    const auto bufSize = gClassJavaIoByteBuffer.callIntMethod(env, buf, "limit");
+
+    srtc::ByteBuffer bb { static_cast<uint8_t*>(bufPtr),
+                          static_cast<size_t>(bufSize) };
+
+    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
+    const auto error = ptr->mConn->publishVideoFrame(std::move(bb));
+    if (error.isError()) {
+        srtc::android::JavaError::throwSRtcException(env, error);
+        return;
+    }
+}
+
 namespace srtc::android {
 
 void JavaPeerConnection::initializeJNI(JNIEnv *env)
 {
+    gClassJavaIoByteBuffer.findClass(env, "java/nio/Buffer")
+            .findMethod(env, "limit", "()I");
+
     gClassPeerConnection.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection")
             .findField(env, "mVideoTrack", "L" SRTC_PACKAGE_NAME "/Track;")
             .findField(env, "mAudioTrack", "L" SRTC_PACKAGE_NAME "/Track;")

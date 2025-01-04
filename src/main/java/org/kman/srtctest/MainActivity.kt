@@ -326,7 +326,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             }
             val codecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
             val codecInfo = findEncoder(codecList, codecMime, false) ?:
-            findEncoder(codecList, codecMime, true)
+                    findEncoder(codecList, codecMime, true)
             if (codecInfo == null) {
                 Util.toast(this, R.string.error_no_encoder)
             } else {
@@ -354,6 +354,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     mEncoderInputSurface = mEncoder?.createInputSurface()
 
                     mEncoder?.start()
+
+                    updateCameraSession()
                 } catch (x: Exception) {
                     Util.toast(this, R.string.error_starting_encoder)
 
@@ -568,11 +570,13 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         ) {
             val buffer = codec.getOutputBuffer(index) ?: return
 
-            val isKeyFrame = (info.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0
-
-            // MyLog.i(TAG, "Encoder frame: key = %b, %d bytes", isKeyFrame, buffer.limit())
-
-            codec.releaseOutputBuffer(index, false)
+            try {
+                mPeerConnection?.publishVideoFrame(buffer);
+            } catch (x: Exception) {
+                Util.toast(this@MainActivity, R.string.error_publishing_video_frame, x.message)
+            } finally {
+                codec.releaseOutputBuffer(index, false)
+            }
         }
 
         override fun onError(codec: MediaCodec, e: MediaCodec.CodecException) {
