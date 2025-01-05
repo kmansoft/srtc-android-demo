@@ -237,6 +237,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
         mEditWhipToken.error = null
 
+        // Save just in case
+        saveFieldsToPrefs(server, token)
+
         // Release current peer connection
         mPeerConnection?.release()
         mPeerConnection = null
