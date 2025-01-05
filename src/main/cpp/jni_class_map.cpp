@@ -109,6 +109,18 @@ jint ClassMap::callIntMethod(JNIEnv* env, jobject obj, const char* name...)
     return env->CallIntMethodV(obj, iter->second, ap);
 }
 
+jobject ClassMap::callObjectMethod(JNIEnv* env, jobject obj, const char* name...)
+{
+    const auto iter = mMethodMap.find(name);
+    assert(iter != mMethodMap.end());
+
+    va_list ap;
+    va_start(ap, name);
+    va_end(ap);
+
+    return env->CallObjectMethodV(obj, iter->second, ap);
+}
+
 jobject ClassMap::newObject(JNIEnv* env, ...)
 {
     const auto iter = mMethodMap.find("<init>");

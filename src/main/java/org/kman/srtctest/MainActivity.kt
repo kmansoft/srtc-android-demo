@@ -5,8 +5,6 @@ import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.graphics.Camera
-import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
@@ -39,6 +37,7 @@ import okhttp3.Response
 import org.json.JSONObject
 import org.kman.srtctest.rtc.PeerConnection
 import org.kman.srtctest.util.MyLog
+import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 
@@ -370,6 +369,12 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     }
 
     private fun onPeerConnectionConnectState(state: Int) {
+        if (state == PeerConnection.CONNECTION_STATE_FAILED) {
+            mEncoder?.release()
+            mEncoder = null
+            mEncoderInputSurface = null
+        }
+
         val stateId = when (state) {
             PeerConnection.CONNECTION_STATE_CONNECTING ->
                 R.string.pc_state_connecting
@@ -586,11 +591,23 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             val csd0 = format.getByteBuffer("csd-0")
             val csd1 = format.getByteBuffer("csd-1")
 
+            val csdList = ArrayList<ByteBuffer>()
+
             if (csd0 != null) {
                 MyLog.i(TAG,"Encoder format csd0: %d bytes", csd0.limit())
+                csdList.add(csd0);
             }
             if (csd1 != null) {
                 MyLog.i(TAG,"Encoder format csd1: %d bytes", csd1.limit())
+                csdList.add(csd1);
+            }
+
+            if (csdList.isNotEmpty()) {
+                try {
+                    mPeerConnection?.setVideoCodecSpecificData(csdList.toTypedArray())
+                } catch (x: Exception) {
+                    Util.toast(this@MainActivity, R.string.error_setting_video_frame_csd, x.message)
+                }
             }
         }
     }

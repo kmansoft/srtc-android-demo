@@ -9,6 +9,7 @@ import androidx.annotation.Nullable;
 import org.kman.srtctest.util.MyLog;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 public class PeerConnection {
 
@@ -108,6 +109,16 @@ public class PeerConnection {
 
     // Publishing frames
 
+    public void setVideoCodecSpecificData(@NonNull ByteBuffer[] array) {
+        for (ByteBuffer buf : array) {
+            buf.position(0);
+        }
+
+        synchronized (mHandleLock) {
+            setVideoCodecSpecificDataImpl(mHandle, array);
+        }
+    }
+
     public void publishVideoFrame(@NonNull ByteBuffer buf) throws SRtcException {
         assert buf.isDirect();
 
@@ -133,6 +144,9 @@ public class PeerConnection {
 
     private native void setPublishAnswerImpl(long handle,
                                              @NonNull String answer) throws SRtcException;
+
+    private native void setVideoCodecSpecificDataImpl(long handle,
+                                                     @NonNull ByteBuffer[] array);
 
     private native void publishVideoFrameImpl(long handle,
                                               @NonNull ByteBuffer buf) throws SRtcException;

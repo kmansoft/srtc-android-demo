@@ -127,6 +127,39 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
 
 extern "C"
 JNIEXPORT void JNICALL
+Java_org_kman_srtctest_rtc_PeerConnection_setVideoCodecSpecificDataImpl(JNIEnv *env, jobject thiz,
+                                                                        jlong handle, jobjectArray array)
+{
+    std::vector<srtc::ByteBuffer> list;
+
+    for (jsize i = 0; i < env->GetArrayLength(array); i += 1) {
+        const auto item = env->GetObjectArrayElement(array, i);
+
+        const auto itemSize = gClassJavaIoByteBuffer.callIntMethod(env, item, "limit");
+        const auto itemArray = env->NewByteArray(itemSize);
+
+        gClassJavaIoByteBuffer.callObjectMethod(env, item, "get", itemArray, 0, itemSize);
+
+        jboolean isCopy = { false };
+        const auto itemArrayPtr = env->GetByteArrayElements(itemArray, &isCopy);
+
+        list.emplace_back(reinterpret_cast<const uint8_t*>(itemArrayPtr), static_cast<size_t>(itemSize));
+
+        env->ReleaseByteArrayElements(itemArray, itemArrayPtr, JNI_ABORT);
+        env->DeleteLocalRef(itemArray);
+    }
+
+    if (!list.empty()) {
+        const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection *>(handle);
+        const auto error = ptr->mConn->setVideoCodecSpecificData(list);
+        if (error.isError()) {
+            srtc::android::JavaError::throwSRtcException(env, error);
+        }
+    }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
 Java_org_kman_srtctest_rtc_PeerConnection_publishVideoFrameImpl(JNIEnv *env, jobject thiz,
                                                                 jlong handle, jobject buf)
 {
@@ -137,7 +170,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_publishVideoFrameImpl(JNIEnv *env, job
                           static_cast<size_t>(bufSize) };
 
     const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
-    const auto error = ptr->mConn->publishVideoFrame(std::move(bb));
+    const auto error = ptr->mConn->publishVideoFrame(bb);
     if (error.isError()) {
         srtc::android::JavaError::throwSRtcException(env, error);
         return;
@@ -148,8 +181,9 @@ namespace srtc::android {
 
 void JavaPeerConnection::initializeJNI(JNIEnv *env)
 {
-    gClassJavaIoByteBuffer.findClass(env, "java/nio/Buffer")
-            .findMethod(env, "limit", "()I");
+    gClassJavaIoByteBuffer.findClass(env, "java/nio/ByteBuffer")
+            .findMethod(env, "limit", "()I")
+            .findMethod(env, "get", "([BII)Ljava/nio/ByteBuffer;");
 
     gClassPeerConnection.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection")
             .findField(env, "mVideoTrack", "L" SRTC_PACKAGE_NAME "/Track;")
