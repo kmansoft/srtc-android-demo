@@ -25,13 +25,14 @@ import android.view.KeyEvent
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.create
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.json.JSONObject
@@ -53,6 +54,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mEditWhipToken = findViewById(R.id.whip_token)
         mButtonConnect = findViewById(R.id.whip_connect)
         mSurfaceViewPreview = findViewById(R.id.preview)
+        mViewGroupBottomBar = findViewById(R.id.bottom_bar)
 
         mButtonConnect.setOnClickListener {
             onClickConnect()
@@ -69,18 +71,12 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mSurfaceViewPreview.holder.removeCallback(this)
         mPreviewSurface = null
 
-        mPeerConnection?.release()
-        mPeerConnection = null
-
         mCamera?.close()
         mCamera = null
 
-        mEncoder?.stop()
-        mEncoder?.release()
-        mEncoder = null
-        mEncoderInputSurface = null
-
         mMediaThread.quitSafely()
+
+        disconnect()
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -90,7 +86,12 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK && event != null && event.repeatCount ==  0) {
-            finish()
+            if (!mIsConnectUIVisible) {
+                disconnect()
+                showConnectUI(true)
+            } else {
+                finish()
+            }
             return true
         }
         return super.onKeyDown(keyCode, event)
@@ -140,6 +141,16 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         if (mPreviewSurface != null) {
             initCameraCapture()
         }
+    }
+
+    private fun disconnect() {
+        mPeerConnection?.release()
+        mPeerConnection = null
+
+        mEncoder?.stop()
+        mEncoder?.release()
+        mEncoder = null
+        mEncoderInputSurface = null
     }
 
     private fun hasPermissions(): Boolean {
@@ -215,6 +226,14 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }.apply()
     }
 
+    private fun showConnectUI(show: Boolean) {
+        if (mIsConnectUIVisible != show) {
+            mIsConnectUIVisible = show
+
+            mViewGroupBottomBar.visibility = if (show) View.VISIBLE else View.GONE
+        }
+    }
+
     private fun onClickConnect() {
         val server = mEditWhipServer.text.toString().trim()
         if (server.isEmpty()) {
@@ -275,6 +294,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             return
         }
 
+        showConnectUI(false)
+
         // offer = Util.loadRawResource(this, R.raw.pub_offer_chrome_v_only)
 
         val request = Request.Builder().apply {
@@ -288,6 +309,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             override fun onCompleted(response: Response?, data: ByteArray?, error: Exception?) {
                 if (error != null) {
                     Util.toast(this@MainActivity, R.string.sdp_offer_error, error.message)
+                    showConnectUI(true)
                     return
                 }
 
@@ -302,6 +324,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                         mPeerConnection?.setPublishAnswer(answer)
                     } catch (x: Exception) {
                         Util.toast(this@MainActivity, R.string.error_remote_description, x.message)
+                        showConnectUI(true)
                         return
                     }
 
@@ -441,6 +464,10 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     }
 
     private fun updateCameraSession() {
+        if (isDestroyed) {
+            return
+        }
+
         val camera = mCamera ?: return
 
         mCameraSession?.close()
@@ -529,6 +556,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private lateinit var mEditWhipToken: EditText
     private lateinit var mButtonConnect: Button
     private lateinit var mSurfaceViewPreview: SurfaceView
+    private lateinit var mViewGroupBottomBar: ViewGroup
+
+    private var mIsConnectUIVisible = true
 
     private var mPeerConnection: PeerConnection? = null
     private var mPreviewSurface: Surface? = null
