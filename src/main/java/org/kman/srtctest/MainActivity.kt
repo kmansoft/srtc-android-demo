@@ -260,7 +260,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         val videoConfig = PeerConnection.VideoConfig()
         videoConfig.layerList = listOf(PeerConnection.VideoLayer().apply {
                 codec = PeerConnection.VIDEO_CODEC_H264
-                profileId = H264_PROFILE
+                profileId = H264_PROFILE_BASELINE
                 level = H264_LEVEL
             }).toTypedArray()
 
@@ -513,7 +513,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
     private fun findEncoderProfile(profileId: Int): Int {
         return when(profileId) {
-            0x42 -> MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline
+            H264_PROFILE_BASELINE -> MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline
+            H264_PROFILE_MAIN -> MediaCodecInfo.CodecProfileLevel.AVCProfileMain
             else -> MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline
         }
     }
@@ -626,7 +627,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
         private const val MIME_VIDEO_H264 = "video/avc"
 
-        private const val H264_PROFILE = 0x42
+        private const val H264_PROFILE_BASELINE = 0x42
+        private const val H264_PROFILE_MAIN = 0x4D
         private const val H264_LEVEL = 31
     }
 }
