@@ -22,6 +22,8 @@ import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.egl.EGLContext
 import javax.microedition.khronos.egl.EGLDisplay
 import javax.microedition.khronos.egl.EGLSurface
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.random.Random
 
 class RenderThread(context: Context,
@@ -31,7 +33,8 @@ class RenderThread(context: Context,
         val thread: RenderThread,
         val id: Int,
         val texture: SurfaceTexture,
-        val surface: Surface
+        val surface: Surface,
+        val orientation: Int
     ) {
         fun release() {
             thread.release(this)
@@ -57,7 +60,7 @@ class RenderThread(context: Context,
         fun onError(error: String)
     }
 
-    fun createCameraTexture(width: Int, height: Int): CameraTexture? {
+    fun createCameraTexture(width: Int, height: Int, orientation: Int): CameraTexture? {
         var res: CameraTexture? = null
 
         if (!blocking {
@@ -100,7 +103,7 @@ class RenderThread(context: Context,
                         @SuppressLint("Recycle")
                         val surface = Surface(surfaceTexture)
 
-                        res = CameraTexture(this@RenderThread, textureId, surfaceTexture, surface)
+                        res = CameraTexture(this@RenderThread, textureId, surfaceTexture, surface, orientation)
                     }
                 }
             }) {
@@ -383,10 +386,9 @@ class RenderThread(context: Context,
         GLES20.glViewport(0, 0, target.width, target.height)
         GLES20.glDisable(GLES20.GL_DEPTH_TEST)
 
-        val random = Random(System.currentTimeMillis())
-        val r = random.nextFloat()
-        val g = random.nextFloat()
-        val b = random.nextFloat()
+        val r = mRandom.nextFloat()
+        val g = mRandom.nextFloat()
+        val b = mRandom.nextFloat()
         GLES20.glClearColor(r, g, b, 0f)
 
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
@@ -431,10 +433,23 @@ class RenderThread(context: Context,
         GLES20.glEnableVertexAttribArray(1)
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texture.id)
+        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, texture.id)
 
-        val textureHandle = GLES20.glGetUniformLocation(mEglProgram, "u_Texture")
-        GLES20.glUniform1i(textureHandle, 0)
+        val textureLocation = GLES20.glGetUniformLocation(mEglProgram, "u_Texture")
+        GLES20.glUniform1i(textureLocation, 0)
+
+        val angle = (360.0 - texture.orientation) * Math.PI / 180.0
+        val matrix = floatArrayOf(
+            cos(angle).toFloat(), -sin(angle).toFloat(),
+            sin(angle).toFloat(), cos(angle).toFloat()
+        )
+        val matrixBuffer = ByteBuffer.allocateDirect(matrix.size * 4).apply {
+            order(ByteOrder.nativeOrder())
+        }.asFloatBuffer()
+        matrixBuffer.put(matrix)
+        matrixBuffer.position(0)
+        val matrixLocation = GLES20.glGetUniformLocation(mEglProgram, "u_TexMatrix")
+        GLES20.glUniformMatrix2fv(matrixLocation, 1, false, matrix, 0)
 
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, order.size, GLES20.GL_UNSIGNED_SHORT, orderBuffer)
 
@@ -460,6 +475,8 @@ class RenderThread(context: Context,
     private var mEglPBuffer: EGLSurface? = null
     private var mEglProgram: Int = 0
     private var mIsInitialized = false
+
+    private val mRandom = Random(System.currentTimeMillis())
 
     // Render targets
     private val mRenderTargetList = ArrayList<RenderTarget>()

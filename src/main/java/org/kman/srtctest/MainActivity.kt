@@ -22,6 +22,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.util.Base64
 import android.util.Range
+import android.util.Size
 import android.view.KeyEvent
 import android.view.Surface
 import android.view.SurfaceHolder
@@ -369,10 +370,13 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             } else {
                 MyLog.i(TAG, "Encoder for %s: %s", codecMime, codecInfo.name)
 
-                val width = 1280
-                val height = 720
+                var size = Size(1280, 720)
 
-                val format = MediaFormat.createVideoFormat(codecMime, width, height).apply {
+                if (mCameraOrientation == 90 || mCameraOrientation == 270) {
+                    size = Size(size.height, size.width)
+                }
+
+                val format = MediaFormat.createVideoFormat(codecMime, size.width, size.height).apply {
                     setInteger(MediaFormat.KEY_BIT_RATE, 2500000)
                     setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
                     setInteger(MediaFormat.KEY_FRAME_RATE, 15)
@@ -393,7 +397,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
                     val inputSurface = mEncoder?.createInputSurface()
                     if (inputSurface != null) {
-                        mEncoderTarget = mRenderThread.createTarget(inputSurface, width, height)
+                        mEncoderTarget = mRenderThread.createTarget(inputSurface, size.width, size.height)
                     }
 
                     mEncoder?.start()
@@ -475,7 +479,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             mCameraOrientation = chars.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 0
 
             mCameraTexture?.release()
-            mCameraTexture = mRenderThread.createCameraTexture(chosenSize.width, chosenSize.height)
+            mCameraTexture = mRenderThread.createCameraTexture(chosenSize.width, chosenSize.height, mCameraOrientation)
 
             mCameraTexture?.also {
                 it.texture.setOnFrameAvailableListener({ surfaceTexture ->
@@ -611,12 +615,12 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
     private var mIsInitCameraDone = false
     private var mCamera: CameraDevice? = null
+    private var mCameraOrientation = 0
     private var mCameraSession: CameraCaptureSession? = null
 
     private var mEncoder: MediaCodec? = null
     private var mEncoderTarget: RenderThread.RenderTarget? = null
 
-    private var mCameraOrientation = 0
     private var mCameraTexture: RenderThread.CameraTexture? = null
     private var mPreviewTarget: RenderThread.RenderTarget? = null
 
