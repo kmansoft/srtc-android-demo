@@ -22,7 +22,6 @@ import android.os.Looper
 import android.os.SystemClock
 import android.util.Base64
 import android.util.Range
-import android.util.Size
 import android.view.KeyEvent
 import android.view.Surface
 import android.view.SurfaceHolder
@@ -398,8 +397,6 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     }
 
                     mEncoder?.start()
-
-                    updateCameraSession()
                 } catch (x: Exception) {
                     Util.toast(this, R.string.error_starting_encoder)
 
@@ -474,6 +471,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 Util.toast(this, R.string.error_no_camera_output_sizes)
                 return
             }
+
+            mCameraOrientation = chars.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 0
 
             mCameraTexture?.release()
             mCameraTexture = mRenderThread.createCameraTexture(chosenSize.width, chosenSize.height)
@@ -617,6 +616,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private var mEncoder: MediaCodec? = null
     private var mEncoderTarget: RenderThread.RenderTarget? = null
 
+    private var mCameraOrientation = 0
     private var mCameraTexture: RenderThread.CameraTexture? = null
     private var mPreviewTarget: RenderThread.RenderTarget? = null
 

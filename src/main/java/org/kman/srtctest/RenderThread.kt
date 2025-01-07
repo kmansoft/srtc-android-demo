@@ -13,7 +13,6 @@ import kotlinx.coroutines.runBlocking
 import org.kman.srtctest.util.MyLog
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.nio.FloatBuffer
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
@@ -285,8 +284,8 @@ class RenderThread(context: Context,
         egl.eglMakeCurrent(eglDisplay, eglPBuffer, eglPBuffer, eglContext)
 
         // Shaders
-        val vshader = loadShader(R.raw.v_shader, GLES20.GL_VERTEX_SHADER)
-        val fshader = loadShader(R.raw.f_shader, GLES20.GL_FRAGMENT_SHADER)
+        val vshader = loadShader(R.raw.shader_v, GLES20.GL_VERTEX_SHADER)
+        val fshader = loadShader(R.raw.shader_f, GLES20.GL_FRAGMENT_SHADER)
         if (vshader == 0 || fshader == 0) {
             return
         }
@@ -296,7 +295,8 @@ class RenderThread(context: Context,
         GLES20.glAttachShader(program, vshader)
         GLES20.glAttachShader(program, fshader)
 
-        GLES20.glBindAttribLocation(program, 0, "vPosition");
+        GLES20.glBindAttribLocation(program, 0, "a_Position")
+        GLES20.glBindAttribLocation(program, 1, "a_TexCoord");
 
         GLES20.glLinkProgram(program)
 
@@ -393,20 +393,50 @@ class RenderThread(context: Context,
 
         // Triangle
         val vertices = floatArrayOf(
-            0.0f, 0.5f, 0.0f,
-            -0.5f, -0.5f, 0.0f,
-            0.5f, -0.5f, 0.0f)
-        val byteBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
-        byteBuffer.order(ByteOrder.nativeOrder())
+            -0.75f, 0.75f,
+            -0.75f, -0.75f,
+            0.75f, -0.75f,
+            0.75f, 0.75f
+        )
+        val verticesBuffer = ByteBuffer.allocateDirect(vertices.size * 4).apply {
+            order(ByteOrder.nativeOrder())
+        }.asFloatBuffer()
+        verticesBuffer.put(vertices)
+        verticesBuffer.position(0)
 
-        val floatBuffer = byteBuffer.asFloatBuffer()
-        floatBuffer.put(vertices)
-        floatBuffer.position(0)
+        val uv = floatArrayOf(
+            0.0f, 1.0f,
+            0.0f, 0.0f,
+            1.0f, 0.0f,
+            1.0f, 1.0f
+        )
+        val uvBuffer = ByteBuffer.allocateDirect(uv.size * 4).apply {
+            order(ByteOrder.nativeOrder())
+        }.asFloatBuffer()
+        uvBuffer.put(uv)
+        uvBuffer.position(0)
+
+        val order = shortArrayOf(0, 1, 2, 0, 2, 3)
+        val orderBuffer  = ByteBuffer.allocateDirect(order.size * 2).apply {
+            order(ByteOrder.nativeOrder())
+        }.asShortBuffer()
+        orderBuffer.put(order)
+        orderBuffer.position(0)
 
         GLES20.glUseProgram(mEglProgram)
-        GLES20.glVertexAttribPointer(0, 3, GLES20.GL_FLOAT, false, 0, floatBuffer)
+
+        GLES20.glVertexAttribPointer(0, 2, GLES20.GL_FLOAT, false, 0, verticesBuffer)
         GLES20.glEnableVertexAttribArray(0)
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 3)
+        GLES20.glVertexAttribPointer(1, 2, GLES20.GL_FLOAT, false, 0, uvBuffer)
+        GLES20.glEnableVertexAttribArray(1)
+
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texture.id)
+
+        val textureHandle = GLES20.glGetUniformLocation(mEglProgram, "u_Texture")
+        GLES20.glUniform1i(textureHandle, 0)
+
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES, order.size, GLES20.GL_UNSIGNED_SHORT, orderBuffer)
 
         egl.eglSwapBuffers(mEglDisplay, target.surface)
     }
