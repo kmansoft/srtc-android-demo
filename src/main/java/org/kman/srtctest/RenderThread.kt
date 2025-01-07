@@ -140,6 +140,8 @@ class RenderThread(context: Context,
 
     fun onCameraTextureUpdated(texture: CameraTexture) {
         submit {
+            MyLog.i(TAG, "onCameraTextureUpdated")
+
             val egl = requireNotNull(mEgl)
             egl.eglMakeCurrent(mEglDisplay, mEglPBuffer, mEglPBuffer, mEglContext)
 
@@ -486,6 +488,7 @@ class RenderThread(context: Context,
         private const val EGL_OPENGL_ES2_BIT = 4
         private val EGL_CONFIG = intArrayOf(
             EGL11.EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+            EGL11.EGL_SURFACE_TYPE, EGL11.EGL_WINDOW_BIT or EGL11.EGL_PBUFFER_BIT,
             EGL11.EGL_RED_SIZE, 8,
             EGL11.EGL_GREEN_SIZE, 8,
             EGL11.EGL_BLUE_SIZE, 8,

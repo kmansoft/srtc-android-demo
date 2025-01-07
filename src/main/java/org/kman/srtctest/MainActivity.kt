@@ -124,7 +124,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mPreviewTarget?.release()
 
         val frame = holder.surfaceFrame
-        //mPreviewTarget = mRenderThread.createTarget(holder.surface, frame.width(), frame.height())
+        mPreviewTarget = mRenderThread.createTarget(holder.surface, frame.width(), frame.height())
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
