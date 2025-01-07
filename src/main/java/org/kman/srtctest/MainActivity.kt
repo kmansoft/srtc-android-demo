@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
@@ -21,6 +22,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.util.Base64
 import android.util.Range
+import android.util.Size
 import android.view.KeyEvent
 import android.view.Surface
 import android.view.SurfaceHolder
@@ -61,6 +63,12 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
         mSurfaceViewPreview.holder.addCallback(this)
 
+        mRenderThread = RenderThread(this, object : RenderThread.ErrorCallback {
+            override fun onError(error: String) {
+                Util.toast(this@MainActivity, R.string.error_opengl, error)
+            }
+        })
+
         setFieldsFromPrefs()
         setFieldsFromIntent(intent)
     }
@@ -69,12 +77,16 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         super.onDestroy()
 
         mSurfaceViewPreview.holder.removeCallback(this)
-        mPreviewSurface = null
+        mPreviewTarget?.release()
 
         mCamera?.close()
         mCamera = null
 
+        mCameraTexture?.release()
+
         mMediaThread.quitSafely()
+
+        mRenderThread.release()
 
         disconnect()
     }
@@ -102,28 +114,25 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
         if (!hasPermissions()) {
             requestPermissions(arrayOf(PERM_CAMERA, PERM_RECORD_AUDIO), 1)
-        } else if (mPreviewSurface != null) {
+        } else {
             initCameraCapture()
         }
     }
 
     override fun surfaceCreated(holder: SurfaceHolder) {
-        mPreviewSurface = holder.surface
-        if (hasPermissions()) {
-            if (mCamera == null) {
-                initCameraCapture()
-            } else {
-                updateCameraSession()
-            }
-        }
+        mPreviewTarget?.release()
+
+        val frame = holder.surfaceFrame
+        mPreviewTarget = mRenderThread.createTarget(holder.surface, frame.width(), frame.height())
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+        mPreviewTarget?.setSize(width, height)
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
-        mPreviewSurface = null
-        updateCameraSession()
+        mPreviewTarget?.release()
+        mPreviewTarget = null
     }
 
     override fun onRequestPermissionsResult(
@@ -138,9 +147,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             }
         }
 
-        if (mPreviewSurface != null) {
-            initCameraCapture()
-        }
+        initCameraCapture()
     }
 
     private fun disconnect() {
@@ -150,7 +157,13 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mEncoder?.stop()
         mEncoder?.release()
         mEncoder = null
-        mEncoderInputSurface = null
+
+        mEncoderTarget?.release()
+        mEncoderTarget = null
+
+        if (!isDestroyed) {
+            updateCameraSession()
+        }
     }
 
     private fun hasPermissions(): Boolean {
@@ -204,7 +217,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 mEditWhipServer.setText(server)
                 mEditWhipToken.setText(token)
 
-                saveFieldsToPrefs(server, token);
+                saveFieldsToPrefs(server, token)
             } catch (x: Exception) {
                 Util.toast(this, R.string.error_parsing_claims, x.toString())
             }
@@ -215,7 +228,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             mEditWhipServer.setText(server)
             mEditWhipToken.setText(token)
 
-            saveFieldsToPrefs(server, token);
+            saveFieldsToPrefs(server, token)
         }
     }
 
@@ -328,7 +341,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                         return
                     }
 
-                    onPublishSdpCompleted();
+                    onPublishSdpCompleted()
                 }
             }
         })
@@ -357,7 +370,10 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             } else {
                 MyLog.i(TAG, "Encoder for %s: %s", codecMime, codecInfo.name)
 
-                val format = MediaFormat.createVideoFormat(codecMime, 1280, 720).apply {
+                val width = 1280
+                val height = 720
+
+                val format = MediaFormat.createVideoFormat(codecMime, width, height).apply {
                     setInteger(MediaFormat.KEY_BIT_RATE, 2500000)
                     setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
                     setInteger(MediaFormat.KEY_FRAME_RATE, 15)
@@ -376,7 +392,10 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 try {
                     mEncoder?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
 
-                    mEncoderInputSurface = mEncoder?.createInputSurface()
+                    val inputSurface = mEncoder?.createInputSurface()
+                    if (inputSurface != null) {
+                        mEncoderTarget = mRenderThread.createTarget(inputSurface, width, height)
+                    }
 
                     mEncoder?.start()
 
@@ -388,7 +407,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
                     mEncoder?.release()
                     mEncoder = null
-                    mEncoderInputSurface = null
+                    mEncoderTarget?.release()
+                    mEncoderTarget = null
                 }
             }
         }
@@ -398,7 +418,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         if (state == PeerConnection.CONNECTION_STATE_FAILED) {
             mEncoder?.release()
             mEncoder = null
-            mEncoderInputSurface = null
+            mEncoderTarget?.release()
+            mEncoderTarget = null
         }
 
         val stateId = when (state) {
@@ -436,8 +457,36 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     }
 
     private fun initCameraCapture(cameraId: String) {
-        val cm = getSystemService(CameraManager::class.java)
         if (ContextCompat.checkSelfPermission(this, PERM_CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            val cm = getSystemService(CameraManager::class.java)
+            val chars = cm.getCameraCharacteristics(cameraId)
+            val streamConfigMap = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+            val outputSizes = streamConfigMap?.getOutputSizes(SurfaceTexture::class.java)
+            if (outputSizes == null) {
+                Util.toast(this, R.string.error_no_camera_output_sizes)
+                return
+            }
+
+            val chosenSize =
+                outputSizes.find { it.width == 1920 && it.height == 1080 } ?:
+                outputSizes.find { it.width == 1280 && it.height == 720}
+            if (chosenSize == null) {
+                Util.toast(this, R.string.error_no_camera_output_sizes)
+                return
+            }
+
+            mCameraTexture?.release()
+            mCameraTexture = mRenderThread.createCameraTexture(chosenSize.width, chosenSize.height)
+
+            mCameraTexture?.also {
+                it.texture.setOnFrameAvailableListener({ surfaceTexture ->
+                    val cameraTexture = mCameraTexture
+                    if (cameraTexture != null && cameraTexture.texture == surfaceTexture) {
+                        mRenderThread.onCameraTextureUpdated(cameraTexture)
+                    }
+                }, mMediaHandler)
+            }
+
             cm.openCamera(cameraId, mCameraStateCallback, mMainHandler)
         }
     }
@@ -473,7 +522,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mCameraSession?.close()
         mCameraSession = null
 
-        val surfaceList = createCameraSurfaceList()
+        val surfaceList = getCaptureSurfaceList()
         if (surfaceList.isNotEmpty()) {
             @Suppress("DEPRECATION")
             camera.createCaptureSession(surfaceList, mCameraSessionCallback, mMediaHandler)
@@ -486,7 +535,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             return
         }
 
-        val surfaceList = createCameraSurfaceList()
+        val surfaceList = getCaptureSurfaceList()
         if (surfaceList.isEmpty()) {
             session.close()
             return
@@ -509,13 +558,10 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         Util.toast(this, R.string.error_camera_session_failed)
     }
 
-    private fun createCameraSurfaceList(): List<Surface> {
+    private fun getCaptureSurfaceList(): List<Surface> {
         val surfaceList = ArrayList<Surface>()
-        mPreviewSurface?.also {
-            surfaceList.add(it)
-        }
-        mEncoderInputSurface?.also {
-            surfaceList.add(it)
+        mCameraTexture?.also {
+            surfaceList.add(it.surface)
         }
         return surfaceList
     }
@@ -558,17 +604,21 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private lateinit var mSurfaceViewPreview: SurfaceView
     private lateinit var mViewGroupBottomBar: ViewGroup
 
+    private lateinit var mRenderThread: RenderThread
+
     private var mIsConnectUIVisible = true
 
     private var mPeerConnection: PeerConnection? = null
-    private var mPreviewSurface: Surface? = null
 
     private var mIsInitCameraDone = false
     private var mCamera: CameraDevice? = null
     private var mCameraSession: CameraCaptureSession? = null
 
     private var mEncoder: MediaCodec? = null
-    private var mEncoderInputSurface: Surface? = null
+    private var mEncoderTarget: RenderThread.RenderTarget? = null
+
+    private var mCameraTexture: RenderThread.CameraTexture? = null
+    private var mPreviewTarget: RenderThread.RenderTarget? = null
 
     private val mCameraStateCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(camera: CameraDevice) {
@@ -584,7 +634,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
 
         override fun onError(camera: CameraDevice, error: Int) {
-            onCameraError(camera, error);
+            onCameraError(camera, error)
         }
     }
 
@@ -610,7 +660,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             val buffer = codec.getOutputBuffer(index) ?: return
 
             try {
-                mPeerConnection?.publishVideoFrame(buffer);
+                mPeerConnection?.publishVideoFrame(buffer)
             } catch (x: Exception) {
                 Util.toast(this@MainActivity, R.string.error_publishing_video_frame, x.message)
             } finally {
@@ -629,11 +679,11 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
             if (csd0 != null) {
                 MyLog.i(TAG,"Encoder format csd0: %d bytes", csd0.limit())
-                csdList.add(csd0);
+                csdList.add(csd0)
             }
             if (csd1 != null) {
                 MyLog.i(TAG,"Encoder format csd1: %d bytes", csd1.limit())
-                csdList.add(csd1);
+                csdList.add(csd1)
             }
 
             if (csdList.isNotEmpty()) {
