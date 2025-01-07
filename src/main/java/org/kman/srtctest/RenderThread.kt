@@ -312,7 +312,6 @@ class RenderThread(context: Context,
             return
         }
 
-
         // Save for use by thread
         mEgl = egl
         mEglDisplay = eglDisplay

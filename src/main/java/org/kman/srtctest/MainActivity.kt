@@ -84,7 +84,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
         mCameraTexture?.release()
 
-        mMediaThread.quitSafely()
+        mCameraThread.quitSafely()
+        mEncoderThread.quitSafely()
 
         mRenderThread.release()
 
@@ -123,7 +124,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mPreviewTarget?.release()
 
         val frame = holder.surfaceFrame
-        mPreviewTarget = mRenderThread.createTarget(holder.surface, frame.width(), frame.height())
+        //mPreviewTarget = mRenderThread.createTarget(holder.surface, frame.width(), frame.height())
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
@@ -373,34 +374,37 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 var size = Size(1280, 720)
 
                 if (mCameraOrientation == 90 || mCameraOrientation == 270) {
-                    size = Size(size.height, size.width)
+                    // size = Size(size.height, size.width)
                 }
 
                 val format = MediaFormat.createVideoFormat(codecMime, size.width, size.height).apply {
-                    setInteger(MediaFormat.KEY_BIT_RATE, 2500000)
+                    setInteger(MediaFormat.KEY_BIT_RATE, 2000000)
                     setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
                     setInteger(MediaFormat.KEY_FRAME_RATE, 15)
+//                    setInteger(MediaFormat.KEY_COLOR_FORMAT,
+//                        MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
                     if (videoTrack.codec == PeerConnection.VIDEO_CODEC_H264) {
-                        setInteger(
-                            MediaFormat.KEY_PROFILE,
-                            findEncoderProfile(videoTrack.profileId)
-                        )
-                        setInteger(MediaFormat.KEY_LEVEL, videoTrack.level)
+//                        setInteger(
+//                            MediaFormat.KEY_PROFILE,
+//                            findEncoderProfile(videoTrack.profileId)
+//                        )
+//                        setInteger(MediaFormat.KEY_LEVEL, videoTrack.level)
                     }
                 }
 
                 mEncoder = MediaCodec.createByCodecName(codecInfo.name)
-                mEncoder?.setCallback(mEncoderCallback)
 
                 try {
+                    mEncoder?.setCallback(mEncoderCallback, mEncoderHandler)
                     mEncoder?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
 
                     val inputSurface = mEncoder?.createInputSurface()
-                    if (inputSurface != null) {
-                        mEncoderTarget = mRenderThread.createTarget(inputSurface, size.width, size.height)
-                    }
 
                     mEncoder?.start()
+
+                    if (inputSurface != null) {
+                       mEncoderTarget = mRenderThread.createTarget(inputSurface, size.width, size.height)
+                    }
                 } catch (x: Exception) {
                     Util.toast(this, R.string.error_starting_encoder)
 
@@ -487,7 +491,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     if (cameraTexture != null && cameraTexture.texture == surfaceTexture) {
                         mRenderThread.onCameraTextureUpdated(cameraTexture)
                     }
-                }, mMediaHandler)
+                }, mCameraHandler)
             }
 
             cm.openCamera(cameraId, mCameraStateCallback, mMainHandler)
@@ -528,7 +532,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         val surfaceList = getCaptureSurfaceList()
         if (surfaceList.isNotEmpty()) {
             @Suppress("DEPRECATION")
-            camera.createCaptureSession(surfaceList, mCameraSessionCallback, mMediaHandler)
+            camera.createCaptureSession(surfaceList, mCameraSessionCallback, mCameraHandler)
         }
     }
 
@@ -554,7 +558,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, Range.create(15, 15))
         }.build()
 
-        session.setRepeatingRequest(request, null, mMediaHandler)
+        session.setRepeatingRequest(request, null, mCameraHandler)
     }
 
     private fun onCameraSessionConfigureFailed(session: CameraCaptureSession) {
@@ -596,8 +600,12 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     }
 
     private val mMainHandler = Handler(Looper.getMainLooper())
-    private val mMediaThread = HandlerThread("Media").apply { start() }
-    private val mMediaHandler = Handler(mMediaThread.looper)
+
+    private val mCameraThread = HandlerThread("Camera").apply { start() }
+    private val mCameraHandler = Handler(mCameraThread.looper)
+
+    private val mEncoderThread = HandlerThread("Camera").apply { start() }
+    private val mEncoderHandler = Handler(mEncoderThread.looper)
 
     private lateinit var mSharedPrefs: SharedPreferences
 
