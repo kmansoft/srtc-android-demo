@@ -28,6 +28,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:keepScreenOn="true"
             android:launchMode="singleTop"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.SRTCTest"

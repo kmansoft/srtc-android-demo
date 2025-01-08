@@ -4,48 +4,42 @@
     android:layout_height="match_parent"
     android:fitsSystemWindows="true">
 
-    <RelativeLayout
+    <SurfaceView
+        android:id="@+id/preview"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent" />
 
-        <LinearLayout
-            android:id="@+id/bottom_bar"
+    <LinearLayout
+        android:id="@+id/bottom_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="?android:attr/windowBackground"
+        android:elevation="12dp"
+        android:orientation="vertical"
+        android:outlineProvider="bounds"
+        android:padding="16dp">
+
+        <EditText
+            android:id="@+id/whip_server"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:elevation="12dp"
-            android:outlineProvider="bounds"
-            android:orientation="vertical"
-            android:background="?android:attr/windowBackground"
-            android:padding="16dp">
+            android:hint="@string/hint_whip_server"
+            android:inputType="textUri" />
 
-            <EditText
-                android:id="@+id/whip_server"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/hint_whip_server"
-                android:inputType="textUri" />
-
-            <EditText
-                android:id="@+id/whip_token"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/hint_whip_token"
-                android:inputType="textNoSuggestions" />
-
-            <Button
-                android:id="@+id/whip_connect"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/whip_connect" />
-
-        </LinearLayout>
-
-        <SurfaceView
-            android:id="@+id/preview"
+        <EditText
+            android:id="@+id/whip_token"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_above="@+id/bottom_bar" />
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_whip_token"
+            android:inputType="textNoSuggestions" />
 
-    </RelativeLayout>
+        <Button
+            android:id="@+id/whip_connect"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/whip_connect" />
+
+    </LinearLayout>
+
 </FrameLayout>
