@@ -481,7 +481,10 @@ class RenderThread(context: Context,
         private const val TAG = "RenderThread"
 
         private const val EGL_OPENGL_ES2_BIT = 4
+        private const val EGL_RECORDABLE_ANDROID = 0x3142
+
         private val EGL_CONFIG = intArrayOf(
+            EGL_RECORDABLE_ANDROID, 1,
             EGL11.EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
             EGL11.EGL_SURFACE_TYPE, EGL11.EGL_WINDOW_BIT or EGL11.EGL_PBUFFER_BIT,
             EGL11.EGL_RED_SIZE, 8,
