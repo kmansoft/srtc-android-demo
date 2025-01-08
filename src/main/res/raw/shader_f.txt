@@ -3,14 +3,13 @@
 precision mediump float;
 
 uniform samplerExternalOES u_Texture;
-uniform mat2 u_TexMatrix;
+uniform mat4 u_TexMatrix;
 
 varying vec2 v_TexCoord;
 
 void main()
 {
-    vec2 v1 = vec2(v_TexCoord.x - 0.5, v_TexCoord.y - 0.5);
-    vec2 rotated = u_TexMatrix * v1;
-    vec2 texture = vec2(rotated.x + 0.5, rotated.y + 0.5);
-    gl_FragColor = texture2D(u_Texture, texture);
+    vec4 v1 = vec4(v_TexCoord.s - 0.5, v_TexCoord.t - 0.5, 0, 1);
+    vec4 v2 = u_TexMatrix * v1;
+    gl_FragColor = texture2D(u_Texture, vec2(v2.s + 0.5, v2.t + 0.5));
 }

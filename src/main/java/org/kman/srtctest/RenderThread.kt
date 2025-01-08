@@ -6,6 +6,7 @@ import android.graphics.SurfaceTexture
 import android.opengl.EGL14
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
+import android.opengl.Matrix
 import android.os.Handler
 import android.os.Looper
 import android.view.Surface
@@ -140,8 +141,6 @@ class RenderThread(context: Context,
 
     fun onCameraTextureUpdated(texture: CameraTexture) {
         submit {
-            MyLog.i(TAG, "onCameraTextureUpdated")
-
             val egl = requireNotNull(mEgl)
             egl.eglMakeCurrent(mEglDisplay, mEglPBuffer, mEglPBuffer, mEglContext)
 
@@ -394,7 +393,9 @@ class RenderThread(context: Context,
 
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
 
-        // Triangle
+        // Draw our textured quad
+        GLES20.glUseProgram(mEglProgram)
+
         val vertices = floatArrayOf(
             -0.75f, 0.75f,
             -0.75f, -0.75f,
@@ -407,30 +408,21 @@ class RenderThread(context: Context,
         verticesBuffer.put(vertices)
         verticesBuffer.position(0)
 
-        val uv = floatArrayOf(
+        val st = floatArrayOf(
             0.0f, 1.0f,
             0.0f, 0.0f,
             1.0f, 0.0f,
             1.0f, 1.0f
         )
-        val uvBuffer = ByteBuffer.allocateDirect(uv.size * 4).apply {
+        val stBuffer = ByteBuffer.allocateDirect(st.size * 4).apply {
             order(ByteOrder.nativeOrder())
         }.asFloatBuffer()
-        uvBuffer.put(uv)
-        uvBuffer.position(0)
-
-        val order = shortArrayOf(0, 1, 2, 0, 2, 3)
-        val orderBuffer  = ByteBuffer.allocateDirect(order.size * 2).apply {
-            order(ByteOrder.nativeOrder())
-        }.asShortBuffer()
-        orderBuffer.put(order)
-        orderBuffer.position(0)
-
-        GLES20.glUseProgram(mEglProgram)
+        stBuffer.put(st)
+        stBuffer.position(0)
 
         GLES20.glVertexAttribPointer(0, 2, GLES20.GL_FLOAT, false, 0, verticesBuffer)
         GLES20.glEnableVertexAttribArray(0)
-        GLES20.glVertexAttribPointer(1, 2, GLES20.GL_FLOAT, false, 0, uvBuffer)
+        GLES20.glVertexAttribPointer(1, 2, GLES20.GL_FLOAT, false, 0, stBuffer)
         GLES20.glEnableVertexAttribArray(1)
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
@@ -439,13 +431,19 @@ class RenderThread(context: Context,
         val textureLocation = GLES20.glGetUniformLocation(mEglProgram, "u_Texture")
         GLES20.glUniform1i(textureLocation, 0)
 
-        val angle = (360.0 - texture.orientation) * Math.PI / 180.0
-        val matrix = floatArrayOf(
-            cos(angle).toFloat(), -sin(angle).toFloat(),
-            sin(angle).toFloat(), cos(angle).toFloat()
-        )
+        val matrix = FloatArray(16)
+        Matrix.setIdentityM(matrix, 0)
+        Matrix.rotateM(matrix, 0, 360.0f - texture.orientation, 0.0f, 0.0f, 1.0f)
+
         val matrixLocation = GLES20.glGetUniformLocation(mEglProgram, "u_TexMatrix")
-        GLES20.glUniformMatrix2fv(matrixLocation, 1, false, matrix, 0)
+        GLES20.glUniformMatrix4fv(matrixLocation, 1, true, matrix, 0)
+
+        val order = shortArrayOf(0, 1, 2, 0, 2, 3)
+        val orderBuffer  = ByteBuffer.allocateDirect(order.size * 2).apply {
+            order(ByteOrder.nativeOrder())
+        }.asShortBuffer()
+        orderBuffer.put(order)
+        orderBuffer.position(0)
 
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, order.size, GLES20.GL_UNSIGNED_SHORT, orderBuffer)
 
