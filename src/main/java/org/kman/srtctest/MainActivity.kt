@@ -374,21 +374,19 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 var size = Size(1280, 720)
 
                 if (mCameraOrientation == 90 || mCameraOrientation == 270) {
-                    // size = Size(size.height, size.width)
+                    size = Size(size.height, size.width)
                 }
 
                 val format = MediaFormat.createVideoFormat(codecMime, size.width, size.height).apply {
                     setInteger(MediaFormat.KEY_BIT_RATE, 2000000)
                     setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
                     setInteger(MediaFormat.KEY_FRAME_RATE, 15)
-//                    setInteger(MediaFormat.KEY_COLOR_FORMAT,
-//                        MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
                     if (videoTrack.codec == PeerConnection.VIDEO_CODEC_H264) {
-//                        setInteger(
-//                            MediaFormat.KEY_PROFILE,
-//                            findEncoderProfile(videoTrack.profileId)
-//                        )
-//                        setInteger(MediaFormat.KEY_LEVEL, videoTrack.level)
+                        setInteger(
+                            MediaFormat.KEY_PROFILE,
+                            findEncoderProfile(videoTrack.profileId)
+                        )
+                        setInteger(MediaFormat.KEY_LEVEL, videoTrack.level)
                     }
                 }
 

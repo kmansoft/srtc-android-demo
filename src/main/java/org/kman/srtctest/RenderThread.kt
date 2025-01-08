@@ -444,11 +444,6 @@ class RenderThread(context: Context,
             cos(angle).toFloat(), -sin(angle).toFloat(),
             sin(angle).toFloat(), cos(angle).toFloat()
         )
-        val matrixBuffer = ByteBuffer.allocateDirect(matrix.size * 4).apply {
-            order(ByteOrder.nativeOrder())
-        }.asFloatBuffer()
-        matrixBuffer.put(matrix)
-        matrixBuffer.position(0)
         val matrixLocation = GLES20.glGetUniformLocation(mEglProgram, "u_TexMatrix")
         GLES20.glUniformMatrix2fv(matrixLocation, 1, false, matrix, 0)
 
