@@ -2,6 +2,7 @@
 #include "srtc/sdp_answer.h"
 #include "srtc/sdp_offer.h"
 #include "srtc/track.h"
+#include "srtc/logging.h"
 
 #include "opus.h"
 #include "opus_defines.h"
@@ -12,6 +13,8 @@
 #include "jni_error.h"
 
 #include <jni.h>
+
+#define LOG(...) srtc::log("JavaPeerConnection", __VA_ARGS__)
 
 namespace {
 
@@ -280,6 +283,8 @@ Error JavaPeerConnection::publishAudioFrame(const void* frame,
             mOpusEncoder = nullptr;
         } else {
             opus_encoder_ctl(mOpusEncoder, OPUS_SET_BITRATE(96 * 1024));
+            opus_encoder_ctl(mOpusEncoder, OPUS_SET_INBAND_FEC(1));
+            opus_encoder_ctl(mOpusEncoder, OPUS_SET_PACKET_LOSS_PERC(20));
         }
     }
 
@@ -294,8 +299,7 @@ Error JavaPeerConnection::publishAudioFrame(const void* frame,
 
         if (encodedSize > 0) {
             output.resize(static_cast<size_t>(encodedSize));
-
-            // return mConn->publishAudioFrame(output);
+            return mConn->publishAudioFrame(output);
         }
     }
 

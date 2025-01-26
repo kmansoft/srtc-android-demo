@@ -728,7 +728,13 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                         RECORDER_SAMPLE_RATE, RECORDER_CHANNELS
                     )
                 } catch (x: Exception) {
-                    Util.toast(this@MainActivity, R.string.error_publishing_video_frame, x.message)
+                    mMainHandler.post {
+                        Util.toast(
+                            this@MainActivity,
+                            R.string.error_publishing_audio_frame,
+                            x.message
+                        )
+                    }
                 }
 
                 lastFrameCount += 1

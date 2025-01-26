@@ -166,7 +166,7 @@ class RenderThread(context: Context,
 
     fun release(target: RenderTarget?) {
         if (target != null) {
-            runBlocking {
+            blocking {
                 val egl = requireNotNull(mEgl)
                 egl.eglMakeCurrent(mEglDisplay, mEglPBuffer, mEglPBuffer, mEglContext)
 
