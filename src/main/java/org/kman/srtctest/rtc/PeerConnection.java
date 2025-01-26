@@ -41,31 +41,34 @@ public class PeerConnection {
         public String cname = "";
     }
 
-    public static class VideoLayer {
+    public static class PubVideoCodecConfig {
+        public PubVideoCodecConfig(int codec, int profileLevelId) {
+            this.codec = codec;
+            this.profileLevelId = profileLevelId;
+        }
+
         public int codec;
-        public int profileId;
-        public int level;
-        // Below are for Simulcast only
-        @Nullable
-        public String name;
-        public int width;
-        public int height;
-        public int bitsPerSecond;
+        public int profileLevelId;
     }
 
-    public static class VideoConfig {
+    public static class PubVideoConfig {
         @NonNull
-        public VideoLayer[] layerList = new VideoLayer[0];
+        public PubVideoCodecConfig[] list = new PubVideoCodecConfig[0];
     }
 
-    public static class AudioConfig {
-        int codec;
+    public static class PubAudioCodecConfig {
+        public int codec;
+    }
+
+    public static class PubAudioConfig {
+        @NonNull
+        public PubAudioCodecConfig[] list = new PubAudioCodecConfig[0];
     }
 
     @NonNull
     public String initPublishOffer(@NonNull OfferConfig config,
-                                   @NonNull VideoConfig video,
-                                   @Nullable AudioConfig audio) throws SRtcException {
+                                   @Nullable PubVideoConfig video,
+                                   @Nullable PubAudioConfig audio) throws SRtcException {
         synchronized (mHandleLock) {
             return initPublishOfferImpl(mHandle, config, video, audio);
         }
@@ -139,8 +142,8 @@ public class PeerConnection {
 
     private native String initPublishOfferImpl(long handle,
                                                @NonNull OfferConfig config,
-                                               @NonNull VideoConfig video,
-                                               @Nullable AudioConfig audio) throws SRtcException;
+                                               @Nullable PubVideoConfig video,
+                                               @Nullable PubAudioConfig audio) throws SRtcException;
 
     private native void setPublishAnswerImpl(long handle,
                                              @NonNull String answer) throws SRtcException;

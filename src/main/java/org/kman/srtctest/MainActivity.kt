@@ -290,12 +290,36 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         val offerConfig = PeerConnection.OfferConfig()
         offerConfig.cname = UUID.randomUUID().toString()
 
-        val videoConfig = PeerConnection.VideoConfig()
-        videoConfig.layerList = listOf(PeerConnection.VideoLayer().apply {
-                codec = PeerConnection.VIDEO_CODEC_H264
-                profileId = H264_PROFILE_BASELINE
-                level = H264_LEVEL
-            }).toTypedArray()
+        val codecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
+        val codecH264 = findEncoder(codecList, MIME_VIDEO_H264, false) ?:
+            findEncoder(codecList, MIME_VIDEO_H264, true)
+        if (codecH264 == null) {
+            Util.toast(this, R.string.error_no_encoder)
+            return
+        }
+
+
+        val videoConfigCodecList = mutableListOf(
+            // Baseline
+            PeerConnection.PubVideoCodecConfig(PeerConnection.VIDEO_CODEC_H264, 0x42001f),
+        )
+
+        val capsH264 = codecH264.getCapabilitiesForType(MIME_VIDEO_H264)
+        if (isProfileSupported(capsH264, MediaCodecInfo.CodecProfileLevel.AVCProfileConstrainedBaseline)) {
+            // Baseline constrained
+            videoConfigCodecList.add(
+                PeerConnection.PubVideoCodecConfig(PeerConnection.VIDEO_CODEC_H264, 0x42e01f)
+            )
+        }
+        if (isProfileSupported(capsH264, MediaCodecInfo.CodecProfileLevel.AVCProfileMain)) {
+            // Main
+            videoConfigCodecList.add(
+                PeerConnection.PubVideoCodecConfig(PeerConnection.VIDEO_CODEC_H264, 0x4d001f)
+            )
+        }
+
+        val videoConfig = PeerConnection.PubVideoConfig()
+        videoConfig.list = videoConfigCodecList.toTypedArray()
 
         val offer = try {
             peerConnection.initPublishOffer(
@@ -589,6 +613,15 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         return null
     }
 
+    private fun isProfileSupported(caps: MediaCodecInfo.CodecCapabilities, profileId: Int): Boolean {
+        for (profile in caps.profileLevels) {
+            if (profile.profile == profileId) {
+                return true
+            }
+        }
+        return false
+    }
+
     private fun findEncoderProfile(profileId: Int): Int {
         return when(profileId) {
             H264_PROFILE_BASELINE -> MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline
@@ -718,7 +751,6 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         private const val MIME_VIDEO_H264 = "video/avc"
 
         private const val H264_PROFILE_BASELINE = 0x42
-        private const val H264_PROFILE_MAIN = 0x4D
-        private const val H264_LEVEL = 31
+        private const val H264_PROFILE_MAIN = 0x4d
     }
 }
