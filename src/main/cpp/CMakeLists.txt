@@ -28,10 +28,6 @@ target_link_libraries(srtctest
         log
 )
 
-target_link_libraries(
-        srtctest
-)
-
 # OPUS
 
 ExternalProject_Add(
@@ -45,6 +41,7 @@ ExternalProject_Add(
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
             -DANDROID_ABI=${ANDROID_ABI}
             -DANDROID_PLATFORM=android-29
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo
 )
 
 target_include_directories(srtctest PRIVATE
@@ -54,3 +51,8 @@ target_link_directories(srtctest PRIVATE
         "${CMAKE_CURRENT_BINARY_DIR}/opus-prefix/src/opus-build")
 
 add_dependencies(srtctest opus)
+
+target_link_libraries(
+        srtctest
+        libopus.a
+)

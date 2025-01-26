@@ -34,6 +34,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
 import okhttp3.MediaType.Companion.toMediaType
@@ -44,9 +45,14 @@ import org.json.JSONObject
 import org.kman.srtctest.rtc.PeerConnection
 import org.kman.srtctest.util.MyLog
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.ShortBuffer
 import java.nio.charset.StandardCharsets
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.abs
+import kotlin.math.sqrt
 
 class MainActivity : Activity(), SurfaceHolder.Callback {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,6 +67,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mButtonConnect = findViewById(R.id.whip_connect)
         mSurfaceViewPreview = findViewById(R.id.preview)
         mViewGroupBottomBar = findViewById(R.id.bottom_bar)
+        mTextRms = findViewById(R.id.audio_rms)
 
         mButtonConnect.setOnClickListener {
             onClickConnect()
@@ -312,7 +319,6 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             return
         }
 
-
         val videoConfig = PeerConnection.PubVideoConfig()
         videoConfig.list.add(
             // Baseline
@@ -513,7 +519,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
                 val format = AudioFormat.Builder().apply {
                     setSampleRate(RECORDER_SAMPLE_RATE)
-                    setChannelMask(RECORDER_CHANNELS)
+                    setChannelMask(
+                        if (RECORDER_CHANNELS == 2) AudioFormat.CHANNEL_IN_STEREO
+                        else AudioFormat.CHANNEL_IN_MONO)
                     setEncoding(RECORDER_AUDIO_ENCODING)
                 }.build()
 
@@ -697,14 +705,31 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         if (RECORDER_CHANNELS == 2) {
             chunkSize *= 2
         }
-        val buffer = ByteBuffer.allocateDirect(chunkSize)
+
+        val byteBuffer = ByteBuffer.allocateDirect(chunkSize).apply {
+            order(ByteOrder.nativeOrder())
+        }
+        val shortBuffer = byteBuffer.asShortBuffer()
 
         var lastTime = SystemClock.elapsedRealtime()
         var lastFrameCount = 0
 
         while (!mIsAudioRecordQuit.get()) {
-            val r = record.read(buffer, buffer.capacity(), AudioRecord.READ_BLOCKING)
+            val r = record.read(byteBuffer, byteBuffer.capacity(), AudioRecord.READ_BLOCKING)
             if (r > 0) {
+                val rms = calculateRms(shortBuffer, r / 2)
+                mMainHandler.post {
+                    showRms(rms)
+                }
+
+                try {
+                    mPeerConnection?.publishAudioFrame(
+                        byteBuffer, r,
+                        RECORDER_SAMPLE_RATE, RECORDER_CHANNELS
+                    )
+                } catch (x: Exception) {
+                    Util.toast(this@MainActivity, R.string.error_publishing_video_frame, x.message)
+                }
 
                 lastFrameCount += 1
                 val now = SystemClock.elapsedRealtime()
@@ -716,6 +741,19 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 }
             }
         }
+    }
+
+    private fun calculateRms(buffer: ShortBuffer, sampleCount: Int): Float {
+        var sum = 0.0f
+        for (i in 0 until sampleCount) {
+            val value = buffer[i].toFloat() / 32767.0f
+            sum += value * value
+        }
+        return sqrt(sum / sampleCount)
+    }
+
+    private fun showRms(rms: Float) {
+        mTextRms.text = String.format(Locale.US, "rms = %.2f", rms)
     }
 
     private val mMainHandler = Handler(Looper.getMainLooper())
@@ -733,6 +771,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private lateinit var mButtonConnect: Button
     private lateinit var mSurfaceViewPreview: SurfaceView
     private lateinit var mViewGroupBottomBar: ViewGroup
+    private lateinit var mTextRms: TextView
 
     private lateinit var mRenderThread: RenderThread
 
@@ -849,7 +888,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
         private const val RECORDER_SAMPLE_RATE = 48000
         private const val RECORDER_CHUNK_MS = 20
-        private const val RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO
+        private const val RECORDER_CHANNELS = 1
         private const val RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT
     }
 }

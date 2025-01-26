@@ -134,6 +134,17 @@ public class PeerConnection {
         }
     }
 
+    public void publishAudioFrame(@NonNull ByteBuffer buf,
+                                  int size,
+                                  int sampleRate,
+                                  int channels) throws SRtcException {
+        assert buf.isDirect();
+
+        synchronized (mHandleLock) {
+            publishAudioFrameImpl(mHandle, buf, size, sampleRate, channels);
+        }
+    }
+
     static {
         System.loadLibrary("srtctest");
     }
@@ -157,6 +168,12 @@ public class PeerConnection {
 
     private native void publishVideoFrameImpl(long handle,
                                               @NonNull ByteBuffer buf) throws SRtcException;
+
+    private native void publishAudioFrameImpl(long handle,
+                                              @NonNull ByteBuffer buf,
+                                              int size,
+                                              int sampleRate,
+                                              int channels) throws SRtcException;
 
     void fromNativeOnConnectionState(int state) {
         mMainHandler.post(() -> {

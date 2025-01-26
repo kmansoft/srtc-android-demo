@@ -14,6 +14,8 @@ import kotlinx.coroutines.runBlocking
 import org.kman.srtctest.util.MyLog
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.FloatBuffer
+import java.nio.ShortBuffer
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
@@ -23,8 +25,6 @@ import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.egl.EGLContext
 import javax.microedition.khronos.egl.EGLDisplay
 import javax.microedition.khronos.egl.EGLSurface
-import kotlin.math.cos
-import kotlin.math.sin
 import kotlin.random.Random
 
 class RenderThread(context: Context,
@@ -313,6 +313,38 @@ class RenderThread(context: Context,
             return
         }
 
+        // Buffers
+        val vertices = floatArrayOf(
+            -0.75f, 0.75f,
+            -0.75f, -0.75f,
+            0.75f, -0.75f,
+            0.75f, 0.75f
+        )
+        mVerticesBuffer = ByteBuffer.allocateDirect(vertices.size * 4).apply {
+            order(ByteOrder.nativeOrder())
+        }.asFloatBuffer()
+        mVerticesBuffer.put(vertices)
+        mVerticesBuffer.position(0)
+
+        val st = floatArrayOf(
+            0.0f, 1.0f,
+            0.0f, 0.0f,
+            1.0f, 0.0f,
+            1.0f, 1.0f
+        )
+        mStBuffer = ByteBuffer.allocateDirect(st.size * 4).apply {
+            order(ByteOrder.nativeOrder())
+        }.asFloatBuffer()
+        mStBuffer.put(st)
+        mStBuffer.position(0)
+
+        val order = shortArrayOf(0, 1, 2, 0, 2, 3)
+        mOrderBuffer  = ByteBuffer.allocateDirect(order.size * 2).apply {
+            order(ByteOrder.nativeOrder())
+        }.asShortBuffer()
+        mOrderBuffer.put(order)
+        mOrderBuffer.position(0)
+
         // Save for use by thread
         mEgl = egl
         mEglDisplay = eglDisplay
@@ -396,33 +428,9 @@ class RenderThread(context: Context,
         // Draw our textured quad
         GLES20.glUseProgram(mEglProgram)
 
-        val vertices = floatArrayOf(
-            -0.75f, 0.75f,
-            -0.75f, -0.75f,
-            0.75f, -0.75f,
-            0.75f, 0.75f
-        )
-        val verticesBuffer = ByteBuffer.allocateDirect(vertices.size * 4).apply {
-            order(ByteOrder.nativeOrder())
-        }.asFloatBuffer()
-        verticesBuffer.put(vertices)
-        verticesBuffer.position(0)
-
-        val st = floatArrayOf(
-            0.0f, 1.0f,
-            0.0f, 0.0f,
-            1.0f, 0.0f,
-            1.0f, 1.0f
-        )
-        val stBuffer = ByteBuffer.allocateDirect(st.size * 4).apply {
-            order(ByteOrder.nativeOrder())
-        }.asFloatBuffer()
-        stBuffer.put(st)
-        stBuffer.position(0)
-
-        GLES20.glVertexAttribPointer(0, 2, GLES20.GL_FLOAT, false, 0, verticesBuffer)
+        GLES20.glVertexAttribPointer(0, 2, GLES20.GL_FLOAT, false, 0, mVerticesBuffer)
         GLES20.glEnableVertexAttribArray(0)
-        GLES20.glVertexAttribPointer(1, 2, GLES20.GL_FLOAT, false, 0, stBuffer)
+        GLES20.glVertexAttribPointer(1, 2, GLES20.GL_FLOAT, false, 0, mStBuffer)
         GLES20.glEnableVertexAttribArray(1)
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
@@ -438,14 +446,7 @@ class RenderThread(context: Context,
         val matrixLocation = GLES20.glGetUniformLocation(mEglProgram, "u_TexMatrix")
         GLES20.glUniformMatrix4fv(matrixLocation, 1, true, matrix, 0)
 
-        val order = shortArrayOf(0, 1, 2, 0, 2, 3)
-        val orderBuffer  = ByteBuffer.allocateDirect(order.size * 2).apply {
-            order(ByteOrder.nativeOrder())
-        }.asShortBuffer()
-        orderBuffer.put(order)
-        orderBuffer.position(0)
-
-        GLES20.glDrawElements(GLES20.GL_TRIANGLES, order.size, GLES20.GL_UNSIGNED_SHORT, orderBuffer)
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES, 6, GLES20.GL_UNSIGNED_SHORT, mOrderBuffer)
 
         egl.eglSwapBuffers(mEglDisplay, target.surface)
     }
@@ -469,6 +470,10 @@ class RenderThread(context: Context,
     private var mEglPBuffer: EGLSurface? = null
     private var mEglProgram: Int = 0
     private var mIsInitialized = false
+
+    private lateinit var mVerticesBuffer: FloatBuffer
+    private lateinit var mStBuffer: FloatBuffer
+    private lateinit var mOrderBuffer: ShortBuffer
 
     private val mRandom = Random(System.currentTimeMillis())
 

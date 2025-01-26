@@ -42,4 +42,16 @@
 
     </LinearLayout>
 
+    <TextView
+        android:id="@+id/audio_rms"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:background="#404040"
+        android:padding="8dp"
+        android:textColor="@color/white"
+        android:textSize="16sp" />
+
 </FrameLayout>

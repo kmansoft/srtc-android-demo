@@ -4,6 +4,7 @@
 #include "srtc/track.h"
 
 #include "opus.h"
+#include "opus_defines.h"
 
 #include "jni_class_map.h"
 #include "jni_util.h"
@@ -177,7 +178,24 @@ Java_org_kman_srtctest_rtc_PeerConnection_publishVideoFrameImpl(JNIEnv *env, job
                           static_cast<size_t>(bufSize) };
 
     const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
-    const auto error = ptr->mConn->publishVideoFrame(bb);
+    const auto error = ptr->publishVideoFrame(bb);
+    if (error.isError()) {
+        srtc::android::JavaError::throwSRtcException(env, error);
+        return;
+    }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_org_kman_srtctest_rtc_PeerConnection_publishAudioFrameImpl(JNIEnv *env, jobject thiz,
+                                                                jlong handle, jobject buf,
+                                                                jint size,
+                                                                jint sampleRate,
+                                                                jint channels)
+{
+    const auto bufPtr = env->GetDirectBufferAddress(buf);
+    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
+    const auto error = ptr->publishAudioFrame(bufPtr, static_cast<size_t>(size), sampleRate, channels);
     if (error.isError()) {
         srtc::android::JavaError::throwSRtcException(env, error);
         return;
@@ -224,6 +242,7 @@ void JavaPeerConnection::initializeJNI(JNIEnv *env)
 JavaPeerConnection::JavaPeerConnection(jobject thiz)
     : mThiz(thiz)
     , mConn(std::make_unique<PeerConnection>())
+    , mOpusEncoder(nullptr)
 {
     mConn->setConnectionStateListener([this](PeerConnection::ConnectionState state){
         const auto env = getJNIEnv();
@@ -234,9 +253,53 @@ JavaPeerConnection::JavaPeerConnection(jobject thiz)
 JavaPeerConnection::~JavaPeerConnection()
 {
     mConn.reset();
+    free(mOpusEncoder);
 
     const auto env = getJNIEnv();
     env->DeleteGlobalRef(mThiz);
+}
+
+Error JavaPeerConnection::publishVideoFrame(ByteBuffer& frame)
+{
+    return mConn->publishVideoFrame(frame);
+}
+
+Error JavaPeerConnection::publishAudioFrame(const void* frame,
+                                            size_t size,
+                                            int sampleRate,
+                                            int channels)
+{
+    // This is thread safe because we have "synchronized" on the Java side
+    if (mOpusEncoder == nullptr) {
+        const auto encoderSize = opus_encoder_get_size(channels);
+        mOpusEncoder = static_cast<OpusEncoder*>(malloc(encoderSize));
+        std::memset(mOpusEncoder, 0, encoderSize);
+
+        if (opus_encoder_init(mOpusEncoder, sampleRate, channels, OPUS_APPLICATION_VOIP) != 0) {
+            free(mOpusEncoder);
+            mOpusEncoder = nullptr;
+        } else {
+            opus_encoder_ctl(mOpusEncoder, OPUS_SET_BITRATE(96 * 1024));
+        }
+    }
+
+    if (mOpusEncoder != nullptr) {
+        ByteBuffer output { 4000 };
+
+        const auto encodedSize = opus_encode(mOpusEncoder,
+            static_cast<const opus_int16*>(frame),
+            static_cast<int>(size / sizeof(opus_int16) / channels),
+            output.data(),
+            static_cast<opus_int32>(output.capacity()));
+
+        if (encodedSize > 0) {
+            output.resize(static_cast<size_t>(encodedSize));
+
+            // return mConn->publishAudioFrame(output);
+        }
+    }
+
+    return Error::OK;
 }
 
 }
