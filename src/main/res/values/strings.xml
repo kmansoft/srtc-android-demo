@@ -23,6 +23,7 @@
     <string name="error_setting_video_frame_csd">Error setting video frame CSD: %s</string>
     <string name="error_opengl">OpenGL error: %s</string>
     <string name="error_no_camera_output_sizes">Error getting camera output sizes</string>
+    <string name="error_cannot_create_audio_record">Error starting audio recording</string>
 
     <string name="sdp_offer_error">SDP offer error: %s</string>
     <string name="sdp_offer_received_sdp_answer">Received SDP answer in %d ms</string>

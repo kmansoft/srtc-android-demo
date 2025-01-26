@@ -11,10 +11,13 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
+import android.media.AudioFormat
+import android.media.AudioRecord
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaCodecList
 import android.media.MediaFormat
+import android.media.MediaRecorder
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
@@ -40,9 +43,11 @@ import okhttp3.Response
 import org.json.JSONObject
 import org.kman.srtctest.rtc.PeerConnection
 import org.kman.srtctest.util.MyLog
+import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity : Activity(), SurfaceHolder.Callback {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -84,6 +89,14 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
         mCameraTexture?.release()
 
+        mIsAudioRecordQuit.set(true)
+        mAudioThread?.join()
+        mAudioThread = null
+
+        mAudioRecord?.stop()
+        mAudioRecord?.release()
+        mAudioRecord = null
+
         mCameraThread.quitSafely()
         mEncoderThread.quitSafely()
 
@@ -117,6 +130,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             requestPermissions(arrayOf(PERM_CAMERA, PERM_RECORD_AUDIO), 1)
         } else {
             initCameraCapture()
+            initAudioRecording()
         }
     }
 
@@ -149,6 +163,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
 
         initCameraCapture()
+        initAudioRecording()
     }
 
     private fun disconnect() {
@@ -483,6 +498,51 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
     }
 
+    private fun initAudioRecording() {
+        if (!mIsInitAudioDone) {
+            mIsInitAudioDone = true
+
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    PERM_RECORD_AUDIO
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                val bufferSize = AudioRecord.getMinBufferSize(
+                    RECORDER_SAMPLE_RATE,
+                    RECORDER_CHANNELS,
+                    RECORDER_AUDIO_ENCODING
+                )
+
+                val format = AudioFormat.Builder().apply {
+                    setSampleRate(RECORDER_SAMPLE_RATE)
+                    setChannelMask(RECORDER_CHANNELS)
+                    setEncoding(RECORDER_AUDIO_ENCODING)
+                }.build()
+
+                val audioRecord = AudioRecord.Builder().apply {
+                    setAudioSource(MediaRecorder.AudioSource.DEFAULT)
+                    setBufferSizeInBytes(bufferSize)
+                    setAudioFormat(format)
+                }.build()
+
+                if (audioRecord == null) {
+                    Util.toast(this, R.string.error_cannot_create_audio_record)
+                    return
+                }
+
+                mAudioRecord = audioRecord
+                mAudioRecord?.startRecording()
+
+                mAudioThread = Thread {
+                    audioThreadFunc(audioRecord)
+                }.apply {
+                    name = "AudioRecord"
+                    start()
+                }
+            }
+        }
+    }
+
     private fun initCameraCapture(cameraId: String) {
         if (ContextCompat.checkSelfPermission(this, PERM_CAMERA) == PackageManager.PERMISSION_GRANTED) {
             val cm = getSystemService(CameraManager::class.java)
@@ -630,6 +690,35 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
     }
 
+    private fun audioThreadFunc(record: AudioRecord) {
+        // Read 20 milliseconds at a time
+        var chunkSize = RECORDER_SAMPLE_RATE * 20 / 1000
+        if (RECORDER_AUDIO_ENCODING == AudioFormat.ENCODING_PCM_16BIT) {
+            chunkSize *= 2
+        }
+        if (RECORDER_CHANNELS == 2) {
+            chunkSize *= 2
+        }
+        val buffer = ByteBuffer.allocateDirect(chunkSize)
+
+        var lastTime = SystemClock.elapsedRealtime()
+        var lastFrameCount = 0
+
+        while (!mIsAudioRecordQuit.get()) {
+            val r = record.read(buffer, buffer.capacity(), AudioRecord.READ_BLOCKING)
+            if (r > 0) {
+                lastFrameCount += 1
+                val now = SystemClock.elapsedRealtime()
+                if (now - lastTime >= 1000L) {
+                    val fps = Math.round(lastFrameCount * 1000.0 / (now - lastTime))
+                    MyLog.i(TAG, "Audio fps=%d, chunkSize=%d", fps, chunkSize)
+                    lastTime = now
+                    lastFrameCount = 0
+                }
+            }
+        }
+    }
+
     private val mMainHandler = Handler(Looper.getMainLooper())
 
     private val mCameraThread = HandlerThread("Camera").apply { start() }
@@ -662,6 +751,11 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
     private var mCameraTexture: RenderThread.CameraTexture? = null
     private var mPreviewTarget: RenderThread.RenderTarget? = null
+
+    private var mIsInitAudioDone = false
+    private val mIsAudioRecordQuit = AtomicBoolean(false)
+    private var mAudioRecord: AudioRecord? = null
+    private var mAudioThread: Thread? = null
 
     private val mCameraStateCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(camera: CameraDevice) {
@@ -752,5 +846,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
         private const val H264_PROFILE_BASELINE = 0x42
         private const val H264_PROFILE_MAIN = 0x4d
+
+        private const val RECORDER_SAMPLE_RATE = 48000
+        private const val RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO
+        private const val RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT
     }
 }
