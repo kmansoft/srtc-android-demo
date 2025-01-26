@@ -9,6 +9,7 @@ import androidx.annotation.Nullable;
 import org.kman.srtctest.util.MyLog;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 
 public class PeerConnection {
@@ -52,17 +53,20 @@ public class PeerConnection {
     }
 
     public static class PubVideoConfig {
-        @NonNull
-        public PubVideoCodecConfig[] list = new PubVideoCodecConfig[0];
+        public final ArrayList<PubVideoCodecConfig> list = new ArrayList<>();
     }
 
     public static class PubAudioCodecConfig {
+        PubAudioCodecConfig(int codec) {
+            this.codec = codec;
+        }
+
         public int codec;
     }
 
     public static class PubAudioConfig {
         @NonNull
-        public PubAudioCodecConfig[] list = new PubAudioCodecConfig[0];
+        public ArrayList<PubAudioCodecConfig> list = new ArrayList<>();
     }
 
     @NonNull

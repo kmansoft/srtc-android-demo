@@ -9,13 +9,11 @@ public class Track {
     Track(int trackId,
           int payloadType,
           int codec,
-          int profileId,
-          int level) {
+          int profileLevelId) {
         mTrackId = trackId;
         mPayloadType = payloadType;
         mCodec = codec;
-        mProfileId = profileId;
-        mLevel = level;
+        mProfileLevelId = profileLevelId;
     }
 
     public int getTrackId() {
@@ -30,25 +28,20 @@ public class Track {
         return mCodec;
     }
 
-    public int getProfileId() {
-        return mProfileId;
-    }
-
-    public int getLevel() {
-        return mLevel;
+    public int getProfileLevelId() {
+        return mProfileLevelId;
     }
 
     @NonNull
     @Override
     public String toString() {
         return String.format(Locale.US,
-                "Track(trackId=%d, payloadType=%d, codec=%d, profileId=%d, level=%d)",
-                mTrackId, mPayloadType, mCodec, mProfileId, mLevel);
+                "Track(trackId=%d, payloadType=%d, codec=%d, profileLevelId=%x)",
+                mTrackId, mPayloadType, mCodec, mProfileLevelId);
     }
 
     private final int mTrackId;
     private final int mPayloadType;
     private final int mCodec;
-    private final int mProfileId;
-    private final int mLevel;
+    private final int mProfileLevelId;
 }

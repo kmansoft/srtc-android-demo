@@ -3,6 +3,8 @@
 #include "srtc/sdp_offer.h"
 #include "srtc/track.h"
 
+#include "opus.h"
+
 #include "jni_class_map.h"
 #include "jni_util.h"
 #include "jni_peer_connection.h"
@@ -13,6 +15,7 @@
 namespace {
 
 srtc::android::ClassMap gClassJavaIoByteBuffer;
+srtc::android::ClassMap gClassJavaUtilArrayList;
 srtc::android::ClassMap gClassPeerConnection;
 srtc::android::ClassMap gClassTrack;
 srtc::android::ClassMap gClassOfferConfig;
@@ -55,9 +58,9 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
     std::vector<srtc::PubVideoCodecConfig> videoList;
 
     if (video) {
-        const auto itemListJni = gClassVideoConfig.getFieldObjectArray(env, video, "list");
-        for (jsize i = 0; i < env->GetArrayLength(itemListJni); i += 1) {
-            const auto itemJni = env->GetObjectArrayElement(itemListJni, i);
+        const auto itemListJni = gClassVideoConfig.getFieldObject(env, video, "list");
+        for (jsize i = 0; i < gClassJavaUtilArrayList.callIntMethod(env, itemListJni, "size"); i += 1) {
+            const auto itemJni = gClassJavaUtilArrayList.callObjectMethod(env, itemListJni, "get", i);
             videoList.push_back(srtc::PubVideoCodecConfig{
                 .codec = static_cast<srtc::Codec>(gClassVideoCodecConfig.getFieldInt(env, itemJni, "codec")),
                 .profileLevelId = static_cast<uint32_t>(gClassVideoCodecConfig.getFieldInt(env, itemJni, "profileLevelId"))
@@ -116,7 +119,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
     if (videoTrack) {
         videoTrackJ = gClassTrack.newObject(env, videoTrack->getTrackId(), videoTrack->getPayloadType(),
                                             static_cast<jint>(videoTrack->getCodec()),
-                                            videoTrack->getProfileId(), videoTrack->getLevel());
+                                            videoTrack->getProfileLevelId());
     }
     gClassPeerConnection.setFieldObject(env, thiz, "mVideoTrack", videoTrackJ);
 
@@ -124,7 +127,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
     if (audioTrack) {
         audioTrackJ = gClassTrack.newObject(env, audioTrack->getTrackId(), audioTrack->getPayloadType(),
                                             static_cast<jint>(audioTrack->getCodec()),
-                                            audioTrack->getProfileId(), audioTrack->getLevel());
+                                            audioTrack->getProfileLevelId());
     }
     gClassPeerConnection.setFieldObject(env, thiz, "mAudioTrack", audioTrackJ);
 }
@@ -189,13 +192,17 @@ void JavaPeerConnection::initializeJNI(JNIEnv *env)
             .findMethod(env, "limit", "()I")
             .findMethod(env, "get", "([BII)Ljava/nio/ByteBuffer;");
 
+    gClassJavaUtilArrayList.findClass(env, "java/util/ArrayList")
+            .findMethod(env, "size", "()I")
+            .findMethod(env, "get", "(I)Ljava/lang/Object;");
+
     gClassPeerConnection.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection")
             .findField(env, "mVideoTrack", "L" SRTC_PACKAGE_NAME "/Track;")
             .findField(env, "mAudioTrack", "L" SRTC_PACKAGE_NAME "/Track;")
             .findMethod(env, "fromNativeOnConnectionState", "(I)V");
 
     gClassTrack.findClass(env, SRTC_PACKAGE_NAME "/Track")
-            .findMethod(env, "<init>", "(IIIII)V");
+            .findMethod(env, "<init>", "(IIII)V");
 
     gClassOfferConfig.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$OfferConfig")
             .findField(env, "cname", "Ljava/lang/String;");
@@ -205,13 +212,13 @@ void JavaPeerConnection::initializeJNI(JNIEnv *env)
             .findField(env, "profileLevelId", "I");
 
     gClassVideoConfig.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$PubVideoConfig")
-            .findField(env, "list", "[L" SRTC_PACKAGE_NAME "/PeerConnection$PubVideoCodecConfig;");
+            .findField(env, "list", "Ljava/util/ArrayList;");
 
     gClassAudioCodecConfig.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$PubAudioCodecConfig")
             .findField(env, "codec", "I");
 
     gClassAudioConfig.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$PubAudioConfig")
-            .findField(env, "list", "[L" SRTC_PACKAGE_NAME "/PeerConnection$PubAudioCodecConfig;");
+            .findField(env, "list", "Ljava/util/ArrayList;");
 }
 
 JavaPeerConnection::JavaPeerConnection(jobject thiz)

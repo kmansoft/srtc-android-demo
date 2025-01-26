@@ -15,9 +15,10 @@ public:
     ClassMap& findMethod(JNIEnv* env, const char* name, const char* signature);
     ClassMap& findField(JNIEnv* env, const char* name, const char* type);
 
-    std::string getFieldString(JNIEnv* env, jobject obj, const char* name) const;
-    jobjectArray getFieldObjectArray(JNIEnv* env, jobject obj, const char* name) const;
-    jint getFieldInt(JNIEnv* env, jobject obj, const char* name) const;
+    [[nodiscard]] jobject getFieldObject(JNIEnv* env, jobject obj, const char* name) const;
+    [[nodiscard]] jint getFieldInt(JNIEnv* env, jobject obj, const char* name) const;
+    [[nodiscard]] std::string getFieldString(JNIEnv* env, jobject obj, const char* name) const;
+    [[nodiscard]] jobjectArray getFieldObjectArray(JNIEnv* env, jobject obj, const char* name) const;
 
     void setFieldObject(JNIEnv* env, jobject obj, const char* name, jobject value);
 

@@ -43,6 +43,22 @@ ClassMap& ClassMap::findField(JNIEnv* env, const char* name, const char* type)
     return *this;
 }
 
+jobject ClassMap::getFieldObject(JNIEnv *env, jobject obj, const char* name) const
+{
+    const auto iter = mFieldMap.find(name);
+    assert(iter != mFieldMap.end());
+
+    return env->GetObjectField(obj, iter->second);
+}
+
+jint ClassMap::getFieldInt(JNIEnv *env, jobject obj, const char* name) const
+{
+    const auto iter = mFieldMap.find(name);
+    assert(iter != mFieldMap.end());
+
+    return env->GetIntField(obj, iter->second);
+}
+
 std::string ClassMap::getFieldString(JNIEnv *env, jobject obj, const char* name) const
 {
     const auto iter = mFieldMap.find(name);
@@ -67,14 +83,6 @@ jobjectArray ClassMap::getFieldObjectArray(JNIEnv* env, jobject obj, const char*
     assert(iter != mFieldMap.end());
 
     return reinterpret_cast<jobjectArray>(env->GetObjectField(obj, iter->second));
-}
-
-jint ClassMap::getFieldInt(JNIEnv *env, jobject obj, const char* name) const
-{
-    const auto iter = mFieldMap.find(name);
-    assert(iter != mFieldMap.end());
-
-    return env->GetIntField(obj, iter->second);
 }
 
 void ClassMap::setFieldObject(JNIEnv* env, jobject obj, const char* name, jobject value)

@@ -43,7 +43,6 @@ import okhttp3.Response
 import org.json.JSONObject
 import org.kman.srtctest.rtc.PeerConnection
 import org.kman.srtctest.util.MyLog
-import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.util.UUID
@@ -314,7 +313,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
 
 
-        val videoConfigCodecList = mutableListOf(
+        val videoConfig = PeerConnection.PubVideoConfig()
+        videoConfig.list.add(
             // Baseline
             PeerConnection.PubVideoCodecConfig(PeerConnection.VIDEO_CODEC_H264, 0x42001f),
         )
@@ -322,19 +322,16 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         val capsH264 = codecH264.getCapabilitiesForType(MIME_VIDEO_H264)
         if (isProfileSupported(capsH264, MediaCodecInfo.CodecProfileLevel.AVCProfileConstrainedBaseline)) {
             // Baseline constrained
-            videoConfigCodecList.add(
+            videoConfig.list.add(
                 PeerConnection.PubVideoCodecConfig(PeerConnection.VIDEO_CODEC_H264, 0x42e01f)
             )
         }
         if (isProfileSupported(capsH264, MediaCodecInfo.CodecProfileLevel.AVCProfileMain)) {
             // Main
-            videoConfigCodecList.add(
+            videoConfig.list.add(
                 PeerConnection.PubVideoCodecConfig(PeerConnection.VIDEO_CODEC_H264, 0x4d001f)
             )
         }
-
-        val videoConfig = PeerConnection.PubVideoConfig()
-        videoConfig.list = videoConfigCodecList.toTypedArray()
 
         val offer = try {
             peerConnection.initPublishOffer(
@@ -421,11 +418,12 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
                     setInteger(MediaFormat.KEY_FRAME_RATE, 15)
                     if (videoTrack.codec == PeerConnection.VIDEO_CODEC_H264) {
+                        val profileLevelId = videoTrack.profileLevelId
                         setInteger(
                             MediaFormat.KEY_PROFILE,
-                            findEncoderProfile(videoTrack.profileId)
+                            findEncoderProfile(profileLevelId shr 8)
                         )
-                        setInteger(MediaFormat.KEY_LEVEL, videoTrack.level)
+                        setInteger(MediaFormat.KEY_LEVEL, profileLevelId and 0xff)
                     }
                 }
 
@@ -691,8 +689,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     }
 
     private fun audioThreadFunc(record: AudioRecord) {
-        // Read 20 milliseconds at a time
-        var chunkSize = RECORDER_SAMPLE_RATE * 20 / 1000
+        val samplesPerChannel = RECORDER_SAMPLE_RATE * RECORDER_CHUNK_MS / 1000
+        var chunkSize = samplesPerChannel
         if (RECORDER_AUDIO_ENCODING == AudioFormat.ENCODING_PCM_16BIT) {
             chunkSize *= 2
         }
@@ -707,6 +705,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         while (!mIsAudioRecordQuit.get()) {
             val r = record.read(buffer, buffer.capacity(), AudioRecord.READ_BLOCKING)
             if (r > 0) {
+
                 lastFrameCount += 1
                 val now = SystemClock.elapsedRealtime()
                 if (now - lastTime >= 1000L) {
@@ -844,10 +843,12 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
         private const val MIME_VIDEO_H264 = "video/avc"
 
-        private const val H264_PROFILE_BASELINE = 0x42
-        private const val H264_PROFILE_MAIN = 0x4d
+        private const val H264_PROFILE_BASELINE = 0x4200
+        private const val H264_PROFILE_BASELINE_CONSTRAINED = 0x42e0
+        private const val H264_PROFILE_MAIN = 0x4d00
 
         private const val RECORDER_SAMPLE_RATE = 48000
+        private const val RECORDER_CHUNK_MS = 20
         private const val RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO
         private const val RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT
     }
