@@ -59,11 +59,13 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
         .cname = gClassOfferConfig.getFieldString(env, config, "cname")
     };
 
+    // Video
     std::vector<srtc::PubVideoCodecConfig> videoList;
 
     if (video) {
         const auto itemListJni = gClassVideoConfig.getFieldObject(env, video, "list");
-        for (jsize i = 0; i < gClassJavaUtilArrayList.callIntMethod(env, itemListJni, "size"); i += 1) {
+        for (jsize i = 0;
+            i < gClassJavaUtilArrayList.callIntMethod(env, itemListJni, "size"); i += 1) {
             const auto itemJni = gClassJavaUtilArrayList.callObjectMethod(env, itemListJni, "get", i);
             videoList.push_back(srtc::PubVideoCodecConfig{
                 .codec = static_cast<srtc::Codec>(gClassVideoCodecConfig.getFieldInt(env, itemJni, "codec")),
@@ -72,15 +74,31 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
         }
     }
 
-    const srtc::PubVideoConfig videoConfig {
-        videoList
-    };
+    const srtc::PubVideoConfig videoConfig { videoList };
 
+    // Audio
+    std::vector<srtc::PubAudioCodecConfig> audioList;
+
+    if (audio) {
+        const auto itemListJni = gClassAudioConfig.getFieldObject(env, audio, "list");
+        for (jsize i = 0;
+            i < gClassJavaUtilArrayList.callIntMethod(env, itemListJni, "size"); i += 1) {
+            const auto itemJni = gClassJavaUtilArrayList.callObjectMethod(env, itemListJni, "get", i);
+            audioList.push_back(srtc::PubAudioCodecConfig{
+                    .codec = static_cast<srtc::Codec>(gClassAudioCodecConfig.getFieldInt(env, itemJni, "codec")),
+                    .minPacketTimeMs = static_cast<uint32_t>(gClassAudioCodecConfig.getFieldInt(env, itemJni, "minPacketTimeMs"))
+            });
+        }
+    }
+
+    const srtc::PubAudioConfig audioConfig { audioList };
+
+    // Create the offer
     std::string outSdpOffer;
 
     const auto offer = std::make_shared<srtc::SdpOffer>(offerConfig,
                                                         video ? std::optional(videoConfig) : std::nullopt,
-                                                        std::nullopt);
+                                                        audio ? std::optional(audioConfig) : std::nullopt);
     const auto [ offerStr, error ] = offer->generate();
 
     if (error.isError()) {
@@ -236,7 +254,8 @@ void JavaPeerConnection::initializeJNI(JNIEnv *env)
             .findField(env, "list", "Ljava/util/ArrayList;");
 
     gClassAudioCodecConfig.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$PubAudioCodecConfig")
-            .findField(env, "codec", "I");
+            .findField(env, "codec", "I")
+            .findField(env, "minPacketTimeMs", "I");
 
     gClassAudioConfig.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$PubAudioConfig")
             .findField(env, "list", "Ljava/util/ArrayList;");

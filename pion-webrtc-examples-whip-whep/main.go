@@ -20,6 +20,7 @@ import (
 // nolint: gochecknoglobals
 var (
 	videoTrack *webrtc.TrackLocalStaticRTP
+	audioTrack *webrtc.TrackLocalStaticRTP
 
 	peerConnectionConfiguration = webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
@@ -35,6 +36,9 @@ func main() {
 	// Everything below is the Pion WebRTC API! Thanks for using it ❤️.
 	var err error
 	if videoTrack, err = webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264}, "video", "pion"); err != nil {
+		panic(err)
+	}
+	if audioTrack, err = webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus}, "audio", "pion"); err != nil {
 		panic(err)
 	}
 
@@ -75,6 +79,12 @@ func whipHandler(w http.ResponseWriter, r *http.Request) {
 	}, webrtc.RTPCodecTypeVideo); err != nil {
 		panic(err)
 	}
+	if err = m.RegisterCodec(webrtc.RTPCodecParameters{
+		RTPCodecCapability: webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus, ClockRate: 48000, Channels: 1, SDPFmtpLine: "", RTCPFeedback: nil},
+		PayloadType:        97,
+	}, webrtc.RTPCodecTypeAudio); err != nil {
+		panic(err)
+	}
 
 	// Create a InterceptorRegistry. This is the user configurable RTP/RTCP Pipeline.
 	// This provides NACKs, RTCP Reports and other features. If you use `webrtc.NewPeerConnection`
@@ -112,6 +122,9 @@ func whipHandler(w http.ResponseWriter, r *http.Request) {
 	if _, err = peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo); err != nil {
 		panic(err)
 	}
+	if _, err = peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio); err != nil {
+		panic(err)
+	}
 
 	// Set a handler for when a new remote track starts, this handler saves buffers to disk as
 	// an ivf file, since we could have multiple video tracks we provide a counter.
@@ -123,8 +136,14 @@ func whipHandler(w http.ResponseWriter, r *http.Request) {
 				panic(err)
 			}
 
-			if err = videoTrack.WriteRTP(pkt); err != nil {
-				panic(err)
+			if track.Kind() == webrtc.RTPCodecTypeVideo {
+				if err = videoTrack.WriteRTP(pkt); err != nil {
+					panic(err)
+				}
+			} else if track.Kind() == webrtc.RTPCodecTypeAudio {
+				if err = audioTrack.WriteRTP(pkt); err != nil {
+					panic(err)
+				}
 			}
 		}
 	})
@@ -147,7 +166,12 @@ func whepHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add Video Track that is being written to from WHIP Session
-	rtpSender, err := peerConnection.AddTrack(videoTrack)
+	videoRtpSender, err := peerConnection.AddTrack(videoTrack)
+	if err != nil {
+		panic(err)
+	}
+	// Add Audio Track that is being written to from WHIP Session
+	audioRtpSender, err := peerConnection.AddTrack(audioTrack)
 	if err != nil {
 		panic(err)
 	}
@@ -158,7 +182,19 @@ func whepHandler(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		rtcpBuf := make([]byte, 1500)
 		for {
-			if _, _, rtcpErr := rtpSender.Read(rtcpBuf); rtcpErr != nil {
+			if _, _, rtcpErr := videoRtpSender.Read(rtcpBuf); rtcpErr != nil {
+				return
+			}
+		}
+	}()
+
+	// Read incoming RTCP packets
+	// Before these packets are returned they are processed by interceptors. For things
+	// like NACK this needs to be called.
+	go func() {
+		rtcpBuf := make([]byte, 1500)
+		for {
+			if _, _, rtcpErr := audioRtpSender.Read(rtcpBuf); rtcpErr != nil {
 				return
 			}
 		}

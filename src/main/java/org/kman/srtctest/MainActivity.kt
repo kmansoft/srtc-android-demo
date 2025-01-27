@@ -311,6 +311,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         val offerConfig = PeerConnection.OfferConfig()
         offerConfig.cname = UUID.randomUUID().toString()
 
+        // Video options
+        val videoConfig = PeerConnection.PubVideoConfig()
+
         val codecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
         val codecH264 = findEncoder(codecList, MIME_VIDEO_H264, false) ?:
             findEncoder(codecList, MIME_VIDEO_H264, true)
@@ -319,7 +322,6 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             return
         }
 
-        val videoConfig = PeerConnection.PubVideoConfig()
         videoConfig.list.add(
             // Baseline
             PeerConnection.PubVideoCodecConfig(PeerConnection.VIDEO_CODEC_H264, 0x42001f),
@@ -339,11 +341,17 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             )
         }
 
+        // Audio config
+        val audioConfig = PeerConnection.PubAudioConfig()
+        audioConfig.list.add(
+            PeerConnection.PubAudioCodecConfig(PeerConnection.AUDIO_CODEC_OPUS, RECORDER_CHUNK_MS)
+        )
+
         val offer = try {
             peerConnection.initPublishOffer(
                 offerConfig,
                 videoConfig,
-                null
+                audioConfig
             )
         } catch (x: Exception) {
             Util.toast(this, R.string.sdp_offer_error, x.message)
