@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">SRTC Test</string>
 
-    <string name="hint_whip_server">Server name</string>
-    <string name="hint_whip_token">Token</string>
+    <string name="hint_whip_server">Server URL</string>
+    <string name="hint_whip_token">Auth token</string>
     <string name="whip_connect">Connect</string>
 
     <string name="error_server_missing">Server name is missing</string>
