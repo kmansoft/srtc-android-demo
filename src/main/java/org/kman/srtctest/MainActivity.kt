@@ -49,9 +49,8 @@ import java.nio.ByteOrder
 import java.nio.ShortBuffer
 import java.nio.charset.StandardCharsets
 import java.util.Locale
-import java.util.UUID
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.math.abs
 import kotlin.math.sqrt
 
 class MainActivity : Activity(), SurfaceHolder.Callback {
@@ -90,8 +89,15 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mSurfaceViewPreview.holder.removeCallback(this)
         mPreviewTarget?.release()
 
-        mCamera?.close()
+        // The camera needs to be released on the camera thread
+        val camera = mCamera
         mCamera = null
+
+        if (camera != null) {
+            mCameraHandler.blockingCall {
+                camera.close()
+            }
+        }
 
         mCameraTexture?.release()
 
@@ -103,12 +109,12 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mAudioRecord?.release()
         mAudioRecord = null
 
+        disconnect()
+
         mCameraThread.quitSafely()
         mEncoderThread.quitSafely()
 
         mRenderThread.release()
-
-        disconnect()
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -176,12 +182,19 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mPeerConnection?.release()
         mPeerConnection = null
 
-        mEncoder?.stop()
-        mEncoder?.release()
-        mEncoder = null
-
         mEncoderTarget?.release()
         mEncoderTarget = null
+
+        // The encoder needs to be released on the encoder thread
+        val encoder = mEncoder
+        mEncoder = null
+
+        if (encoder != null) {
+            mEncoderHandler.blockingCall {
+                encoder.stop()
+                encoder.release()
+            }
+        }
 
         if (!isDestroyed) {
             updateCameraSession()
@@ -787,7 +800,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private val mCameraThread = HandlerThread("Camera").apply { start() }
     private val mCameraHandler = Handler(mCameraThread.looper)
 
-    private val mEncoderThread = HandlerThread("Camera").apply { start() }
+    private val mEncoderThread = HandlerThread("Encoder").apply { start() }
     private val mEncoderHandler = Handler(mEncoderThread.looper)
 
     private lateinit var mSharedPrefs: SharedPreferences
@@ -895,6 +908,15 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 }
             }
         }
+    }
+
+    fun Handler.blockingCall(r: Runnable) {
+        val latch = CountDownLatch(1)
+        post {
+            r.run()
+            latch.countDown()
+        }
+        latch.await()
     }
 
     companion object {
