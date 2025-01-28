@@ -11,6 +11,7 @@ import org.kman.srtctest.util.MyLog;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class PeerConnection {
 
@@ -39,7 +40,7 @@ public class PeerConnection {
 
     public static class OfferConfig {
         @NonNull
-        public String cname = "";
+        public String cname = UUID.randomUUID().toString();
     }
 
     public static class PubVideoCodecConfig {

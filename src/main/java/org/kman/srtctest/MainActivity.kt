@@ -309,7 +309,6 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         val peerConnection = requireNotNull(mPeerConnection)
 
         val offerConfig = PeerConnection.OfferConfig()
-        offerConfig.cname = UUID.randomUUID().toString()
 
         // Video options
         val videoConfig = PeerConnection.PubVideoConfig()

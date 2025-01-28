@@ -55,6 +55,13 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
                                                                jlong handle, jobject config,
                                                                jobject video, jobject audio)
 {
+    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
+    if (!ptr) {
+        const srtc::Error error = { srtc::Error::Code::InvalidData, "The connection has been released" };
+        srtc::android::JavaError::throwSRtcException(env, error);
+        return nullptr;
+    }
+
     const srtc::OfferConfig offerConfig{
         .cname = gClassOfferConfig.getFieldString(env, config, "cname")
     };
@@ -107,7 +114,6 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
         return nullptr;
     }
 
-    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
     ptr->mConn->setSdpOffer(offer);
 
     return env->NewStringUTF(offerStr.c_str());
@@ -118,6 +124,11 @@ JNIEXPORT void JNICALL
 Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobject thiz, jlong handle,
                                                                jstring answer)
 {
+    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
+    if (!ptr) {
+        return;
+    }
+
     std::shared_ptr<srtc::SdpAnswer> outAnswer;
     const auto answerStr = srtc::android::fromJavaString(env, answer);
 
@@ -127,7 +138,6 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
         return;
     }
 
-    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
     const auto error2 = ptr->mConn->setSdpAnswer(outAnswer);
     if (error2.isError()) {
         srtc::android::JavaError::throwSRtcException(env, error2);
@@ -159,6 +169,11 @@ JNIEXPORT void JNICALL
 Java_org_kman_srtctest_rtc_PeerConnection_setVideoCodecSpecificDataImpl(JNIEnv *env, jobject thiz,
                                                                         jlong handle, jobjectArray array)
 {
+    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection *>(handle);
+    if (!ptr) {
+        return;
+    }
+
     std::vector<srtc::ByteBuffer> list;
 
     for (jsize i = 0; i < env->GetArrayLength(array); i += 1) {
@@ -179,7 +194,6 @@ Java_org_kman_srtctest_rtc_PeerConnection_setVideoCodecSpecificDataImpl(JNIEnv *
     }
 
     if (!list.empty()) {
-        const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection *>(handle);
         const auto error = ptr->mConn->setVideoCodecSpecificData(list);
         if (error.isError()) {
             srtc::android::JavaError::throwSRtcException(env, error);
@@ -192,13 +206,17 @@ JNIEXPORT void JNICALL
 Java_org_kman_srtctest_rtc_PeerConnection_publishVideoFrameImpl(JNIEnv *env, jobject thiz,
                                                                 jlong handle, jobject buf)
 {
+    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
+    if (!ptr) {
+        return;
+    }
+
     const auto bufPtr = env->GetDirectBufferAddress(buf);
     const auto bufSize = gClassJavaIoByteBuffer.callIntMethod(env, buf, "limit");
 
-    srtc::ByteBuffer bb { static_cast<uint8_t*>(bufPtr),
-                          static_cast<size_t>(bufSize) };
+    srtc::ByteBuffer bb{static_cast<uint8_t *>(bufPtr),
+                        static_cast<size_t>(bufSize)};
 
-    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
     const auto error = ptr->publishVideoFrame(bb);
     if (error.isError()) {
         srtc::android::JavaError::throwSRtcException(env, error);
@@ -214,8 +232,12 @@ Java_org_kman_srtctest_rtc_PeerConnection_publishAudioFrameImpl(JNIEnv *env, job
                                                                 jint sampleRate,
                                                                 jint channels)
 {
-    const auto bufPtr = env->GetDirectBufferAddress(buf);
     const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
+    if (!ptr) {
+        return;
+    }
+
+    const auto bufPtr = env->GetDirectBufferAddress(buf);
     const auto error = ptr->publishAudioFrame(bufPtr, static_cast<size_t>(size), sampleRate, channels);
     if (error.isError()) {
         srtc::android::JavaError::throwSRtcException(env, error);
@@ -274,6 +296,8 @@ JavaPeerConnection::JavaPeerConnection(jobject thiz)
 
 JavaPeerConnection::~JavaPeerConnection()
 {
+    LOG("destructor %p", this);
+
     mConn.reset();
     free(mOpusEncoder);
 
