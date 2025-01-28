@@ -431,13 +431,14 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     setInteger(MediaFormat.KEY_BIT_RATE, 2000000)
                     setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
                     setInteger(MediaFormat.KEY_FRAME_RATE, 15)
+                    //setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
                     if (videoTrack.codec == PeerConnection.VIDEO_CODEC_H264) {
                         val profileLevelId = videoTrack.profileLevelId
                         setInteger(
                             MediaFormat.KEY_PROFILE,
                             findEncoderProfile(profileLevelId shr 8)
                         )
-                        setInteger(MediaFormat.KEY_LEVEL, profileLevelId and 0xff)
+                        setInteger(MediaFormat.KEY_LEVEL, findEncoderLevel(profileLevelId and 0xff))
                     }
                 }
 
@@ -699,8 +700,20 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private fun findEncoderProfile(profileId: Int): Int {
         return when(profileId) {
             H264_PROFILE_BASELINE -> MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline
+            H264_PROFILE_BASELINE_CONSTRAINED -> MediaCodecInfo.CodecProfileLevel.AVCProfileConstrainedBaseline
             H264_PROFILE_MAIN -> MediaCodecInfo.CodecProfileLevel.AVCProfileMain
             else -> MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline
+        }
+    }
+
+    private fun findEncoderLevel(levelId: Int): Int {
+        return when(levelId) {
+            30 -> MediaCodecInfo.CodecProfileLevel.AVCLevel3
+            31 -> MediaCodecInfo.CodecProfileLevel.AVCLevel31
+            40 -> MediaCodecInfo.CodecProfileLevel.AVCLevel4
+            41 -> MediaCodecInfo.CodecProfileLevel.AVCLevel41
+            42 -> MediaCodecInfo.CodecProfileLevel.AVCLevel42
+            else -> MediaCodecInfo.CodecProfileLevel.AVCLevel31
         }
     }
 
