@@ -132,15 +132,13 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
     std::shared_ptr<srtc::SdpAnswer> outAnswer;
     const auto answerStr = srtc::android::fromJavaString(env, answer);
 
-    const auto error1 = srtc::SdpAnswer::parse(answerStr, outAnswer);
-    if (error1.isError()) {
-        srtc::android::JavaError::throwSRtcException(env, error1);
+    if (const auto error = srtc::SdpAnswer::parse(answerStr, outAnswer); error.isError()) {
+        srtc::android::JavaError::throwSRtcException(env, error);
         return;
     }
 
-    const auto error2 = ptr->mConn->setSdpAnswer(outAnswer);
-    if (error2.isError()) {
-        srtc::android::JavaError::throwSRtcException(env, error2);
+    if (const auto error = ptr->mConn->setSdpAnswer(outAnswer); error.isError()) {
+        srtc::android::JavaError::throwSRtcException(env, error);
         return;
     }
 
