@@ -104,8 +104,8 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
     std::string outSdpOffer;
 
     const auto offer = std::make_shared<srtc::SdpOffer>(offerConfig,
-                                                        video ? std::optional(videoConfig) : std::nullopt,
-                                                        audio ? std::optional(audioConfig) : std::nullopt);
+                                                        video ? srtc::optional(videoConfig) : srtc::nullopt,
+                                                        audio ? srtc::optional(audioConfig) : srtc::nullopt);
     const auto [ offerStr, error ] = offer->generate();
 
     if (error.isError()) {
