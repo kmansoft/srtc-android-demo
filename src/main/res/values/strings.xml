@@ -16,6 +16,7 @@
     <string name="error_camera_open">Error opening the camera: %d</string>
     <string name="error_camera_session_failed">Error creating a capture session</string>
     <string name="error_no_encoder">Error finding the encoder</string>
+    <string name="error_creating_encoder">Error creating the encoder</string>
     <string name="error_starting_encoder">Error starting the encoder</string>
     <string name="error_unsupported_video_codec">Unsupported video codec: %d</string>
     <string name="error_remote_description">Error setting remote description: %s</string>

@@ -443,7 +443,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     setInteger(MediaFormat.KEY_BIT_RATE, 2000000)
                     setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
                     setInteger(MediaFormat.KEY_FRAME_RATE, 15)
-                    //setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
+                    setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
                     if (videoTrack.codec == PeerConnection.VIDEO_CODEC_H264) {
                         val profileLevelId = videoTrack.profileLevelId
                         setInteger(
@@ -454,23 +454,26 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     }
                 }
 
-                mEncoder = MediaCodec.createByCodecName(codecInfo.name)
+                mEncoder = try {
+                    MediaCodec.createByCodecName(codecInfo.name)
+                } catch (x: Exception) {
+                    MyLog.i(TAG, "Error creating the encoder: %s", x.message)
+                    Util.toast(this, R.string.error_creating_encoder)
+                    return
+                }
 
                 try {
                     mEncoder?.setCallback(mEncoderCallback, mEncoderHandler)
                     mEncoder?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
 
-                    val inputSurface = mEncoder?.createInputSurface()
+                    val inputSurface = requireNotNull(mEncoder?.createInputSurface())
 
                     mEncoder?.start()
 
-                    if (inputSurface != null) {
-                       mEncoderTarget = mRenderThread.createTarget(inputSurface, size.width, size.height)
-                    }
+                    mEncoderTarget = mRenderThread.createTarget(inputSurface, size.width, size.height)
                 } catch (x: Exception) {
-                    Util.toast(this, R.string.error_starting_encoder)
-
                     MyLog.i(TAG, "Error configuring the encoder: %s", x.message)
+                    Util.toast(this, R.string.error_starting_encoder)
 
                     mEncoder?.release()
                     mEncoder = null
@@ -910,7 +913,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
     }
 
-    fun Handler.blockingCall(r: Runnable) {
+    private fun Handler.blockingCall(r: Runnable) {
         val latch = CountDownLatch(1)
         post {
             r.run()
