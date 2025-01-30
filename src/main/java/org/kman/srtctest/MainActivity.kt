@@ -451,6 +451,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                             findEncoderProfile(profileLevelId shr 8)
                         )
                         setInteger(MediaFormat.KEY_LEVEL, findEncoderLevel(profileLevelId and 0xff))
+                        if (profileLevelId shr 8 == H264_PROFILE_MAIN) {
+                            setInteger(MediaFormat.KEY_MAX_B_FRAMES, 0)
+                        }
                     }
                 }
 

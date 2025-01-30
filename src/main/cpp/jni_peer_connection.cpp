@@ -28,6 +28,38 @@ srtc::android::ClassMap gClassVideoConfig;
 srtc::android::ClassMap gClassAudioCodecConfig;
 srtc::android::ClassMap gClassAudioConfig;
 
+class HighestProfileSelector : public srtc::SdpAnswer::TrackSelector {
+public:
+    ~HighestProfileSelector() override = default;
+
+    std::shared_ptr<srtc::Track> selectTrack(srtc::MediaType type,
+                                             const std::vector<std::shared_ptr<srtc::Track>>& list) const override;
+
+};
+
+std::shared_ptr<srtc::Track> HighestProfileSelector::selectTrack(srtc::MediaType type,
+                                                                 const std::vector<std::shared_ptr<srtc::Track>>& list) const
+{
+    if (list.empty()) {
+        return nullptr;
+    }
+
+    if (type == srtc::MediaType::Audio) {
+        return list[0];
+    } else if (type == srtc::MediaType::Video) {
+        auto best = list[0];
+        for (size_t i = 1; i < list.size(); i += 1) {
+            const auto& curr = list[i];
+            if (best->getProfileLevelId() < curr->getProfileLevelId()) {
+                best = curr;
+            }
+        }
+        return best;
+    } else {
+        return nullptr;
+    }
+}
+
 }
 
 extern "C"
@@ -132,7 +164,8 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
     std::shared_ptr<srtc::SdpAnswer> outAnswer;
     const auto answerStr = srtc::android::fromJavaString(env, answer);
 
-    if (const auto error = srtc::SdpAnswer::parse(answerStr, nullptr, outAnswer); error.isError()) {
+    const auto selector = std::make_shared<HighestProfileSelector>();
+    if (const auto error = srtc::SdpAnswer::parse(answerStr, selector, outAnswer); error.isError()) {
         srtc::android::JavaError::throwSRtcException(env, error);
         return;
     }
