@@ -32,10 +32,24 @@ class HighestProfileSelector : public srtc::SdpAnswer::TrackSelector {
 public:
     ~HighestProfileSelector() override = default;
 
-    std::shared_ptr<srtc::Track> selectTrack(srtc::MediaType type,
-                                             const std::vector<std::shared_ptr<srtc::Track>>& list) const override;
+    [[nodiscard]] std::shared_ptr<srtc::Track> selectTrack(srtc::MediaType type,
+                                                           const std::vector<std::shared_ptr<srtc::Track>>& list) const override;
 
 };
+
+bool isBetter(const std::shared_ptr<srtc::Track>& best,
+              const std::shared_ptr<srtc::Track>& curr)
+{
+    if (!best) {
+        return true;
+    }
+
+    if (best->getCodec() != curr->getCodec()) {
+        return best->getCodec() < curr->getCodec();
+    }
+
+    return best->getProfileLevelId() < curr->getProfileLevelId();
+}
 
 std::shared_ptr<srtc::Track> HighestProfileSelector::selectTrack(srtc::MediaType type,
                                                                  const std::vector<std::shared_ptr<srtc::Track>>& list) const
@@ -47,10 +61,9 @@ std::shared_ptr<srtc::Track> HighestProfileSelector::selectTrack(srtc::MediaType
     if (type == srtc::MediaType::Audio) {
         return list[0];
     } else if (type == srtc::MediaType::Video) {
-        auto best = list[0];
-        for (size_t i = 1; i < list.size(); i += 1) {
-            const auto& curr = list[i];
-            if (best->getProfileLevelId() < curr->getProfileLevelId()) {
+        std::shared_ptr<srtc::Track> best;
+        for (const auto& curr : list) {
+            if (isBetter(best, curr)) {
                 best = curr;
             }
         }
@@ -180,7 +193,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
 
     jobject videoTrackJ = nullptr;
     if (videoTrack) {
-        videoTrackJ = gClassTrack.newObject(env, videoTrack->getTrackId(), videoTrack->getPayloadType(),
+        videoTrackJ = gClassTrack.newObject(env, videoTrack->getTrackId(), videoTrack->getPayloadId(),
                                             static_cast<jint>(videoTrack->getCodec()),
                                             videoTrack->getProfileLevelId());
     }
@@ -188,7 +201,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
 
     jobject audioTrackJ = nullptr;
     if (audioTrack) {
-        audioTrackJ = gClassTrack.newObject(env, audioTrack->getTrackId(), audioTrack->getPayloadType(),
+        audioTrackJ = gClassTrack.newObject(env, audioTrack->getTrackId(), audioTrack->getPayloadId(),
                                             static_cast<jint>(audioTrack->getCodec()),
                                             audioTrack->getProfileLevelId());
     }
