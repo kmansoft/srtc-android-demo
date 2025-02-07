@@ -151,15 +151,20 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
     const auto offer = std::make_shared<srtc::SdpOffer>(offerConfig,
                                                         video ? srtc::optional(videoConfig) : srtc::nullopt,
                                                         audio ? srtc::optional(audioConfig) : srtc::nullopt);
-    const auto [ offerStr, error ] = offer->generate();
+    const auto [ offerStr, error1 ] = offer->generate();
 
-    if (error.isError()) {
+    if (error1.isError()) {
         // Throw an exception
-        srtc::android::JavaError::throwSRtcException(env, error);
+        srtc::android::JavaError::throwSRtcException(env, error1);
         return nullptr;
     }
 
-    ptr->mConn->setSdpOffer(offer);
+    const auto error2 = ptr->mConn->setSdpOffer(offer);
+    if (error2.isError()) {
+        // Throw an exception
+        srtc::android::JavaError::throwSRtcException(env, error2);
+        return nullptr;
+    }
 
     return env->NewStringUTF(offerStr.c_str());
 }
