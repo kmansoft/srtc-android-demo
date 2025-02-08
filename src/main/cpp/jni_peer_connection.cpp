@@ -266,7 +266,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_publishVideoFrameImpl(JNIEnv *env, job
     srtc::ByteBuffer bb{static_cast<uint8_t *>(bufPtr),
                         static_cast<size_t>(bufSize)};
 
-    const auto error = ptr->publishVideoFrame(bb);
+    const auto error = ptr->publishVideoFrame(std::move(bb));
     if (error.isError()) {
         srtc::android::JavaError::throwSRtcException(env, error);
         return;
@@ -354,9 +354,9 @@ JavaPeerConnection::~JavaPeerConnection()
     env->DeleteGlobalRef(mThiz);
 }
 
-Error JavaPeerConnection::publishVideoFrame(ByteBuffer& frame)
+Error JavaPeerConnection::publishVideoFrame(ByteBuffer&& frame)
 {
-    return mConn->publishVideoFrame(frame);
+    return mConn->publishVideoFrame(std::move(frame));
 }
 
 Error JavaPeerConnection::publishAudioFrame(const void* frame,
@@ -391,7 +391,7 @@ Error JavaPeerConnection::publishAudioFrame(const void* frame,
 
         if (encodedSize > 0) {
             output.resize(static_cast<size_t>(encodedSize));
-            return mConn->publishAudioFrame(output);
+            return mConn->publishAudioFrame(std::move(output));
         }
     }
 
