@@ -14,7 +14,7 @@
 
 #include <jni.h>
 
-#define LOG(...) srtc::log("JavaPeerConnection", __VA_ARGS__)
+#define LOG(level, ...) srtc::log(level, "JavaPeerConnection", __VA_ARGS__)
 
 namespace {
 
@@ -345,7 +345,7 @@ JavaPeerConnection::JavaPeerConnection(jobject thiz)
 
 JavaPeerConnection::~JavaPeerConnection()
 {
-    LOG("destructor %p", this);
+    LOG(SRTC_LOG_V, "destructor %p", this);
 
     mConn.reset();
     free(mOpusEncoder);
