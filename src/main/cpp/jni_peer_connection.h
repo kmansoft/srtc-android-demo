@@ -13,7 +13,7 @@ class JavaPeerConnection {
 public:
     static void initializeJNI(JNIEnv* env);
 
-    JavaPeerConnection(jobject thiz);
+    explicit JavaPeerConnection(jobject thiz);
     ~JavaPeerConnection();
 
     [[nodiscard]] Error publishVideoFrame(ByteBuffer&& frame);
