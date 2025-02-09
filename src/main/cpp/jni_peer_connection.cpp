@@ -179,11 +179,13 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
         return;
     }
 
-    std::shared_ptr<srtc::SdpAnswer> outAnswer;
+    const auto offer = ptr->mConn->getSdpOffer();
     const auto answerStr = srtc::android::fromJavaString(env, answer);
-
     const auto selector = std::make_shared<HighestProfileSelector>();
-    if (const auto error = srtc::SdpAnswer::parse(answerStr, selector, outAnswer); error.isError()) {
+
+    std::shared_ptr<srtc::SdpAnswer> outAnswer;
+
+    if (const auto error = srtc::SdpAnswer::parse(offer, answerStr, selector, outAnswer); error.isError()) {
         srtc::android::JavaError::throwSRtcException(env, error);
         return;
     }
@@ -198,17 +200,21 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
 
     jobject videoTrackJ = nullptr;
     if (videoTrack) {
-        videoTrackJ = gClassTrack.newObject(env, videoTrack->getTrackId(), videoTrack->getPayloadId(),
+        videoTrackJ = gClassTrack.newObject(env,
+                                            static_cast<jint>(videoTrack->getTrackId()),
+                                            static_cast<jint>(videoTrack->getPayloadId()),
                                             static_cast<jint>(videoTrack->getCodec()),
-                                            videoTrack->getProfileLevelId());
+                                            static_cast<jint>(videoTrack->getProfileLevelId()));
     }
     gClassPeerConnection.setFieldObject(env, thiz, "mVideoTrack", videoTrackJ);
 
     jobject audioTrackJ = nullptr;
     if (audioTrack) {
-        audioTrackJ = gClassTrack.newObject(env, audioTrack->getTrackId(), audioTrack->getPayloadId(),
+        audioTrackJ = gClassTrack.newObject(env,
+                                            static_cast<jint>(audioTrack->getTrackId()),
+                                            static_cast<jint>(audioTrack->getPayloadId()),
                                             static_cast<jint>(audioTrack->getCodec()),
-                                            audioTrack->getProfileLevelId());
+                                            static_cast<jint>(audioTrack->getProfileLevelId()));
     }
     gClassPeerConnection.setFieldObject(env, thiz, "mAudioTrack", audioTrackJ);
 }
