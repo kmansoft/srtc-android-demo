@@ -9,8 +9,9 @@ add_subdirectory(
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
+set(BUILD_SHARED_LIBS ON)
+
 add_library(srtctest
-        SHARED
         jni_class_map.h
         jni_class_map.cpp
         jni_error.h
@@ -56,3 +57,8 @@ target_link_libraries(
         srtctest
         libopus.a
 )
+
+# LibSRTP
+
+target_link_directories(srtctest PRIVATE
+        "${CMAKE_CURRENT_BINARY_DIR}/srtc/srtp-prefix/src/srtp-build")
