@@ -2,16 +2,14 @@ cmake_minimum_required(VERSION 3.22.1)
 
 project("srtctest")
 
-add_subdirectory(
-        "srtc"
-)
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
-set(BUILD_SHARED_LIBS ON)
+include(ExternalProject)
+include(FetchContent)
 
 add_library(srtctest
+        SHARED
         jni_class_map.h
         jni_class_map.cpp
         jni_error.h
@@ -24,10 +22,51 @@ add_library(srtctest
 )
 
 target_link_libraries(srtctest
-        srtc
         android
         log
 )
+
+# BoringSSL
+# Has to be available during configure because dependencies do find_package(OPENSSL)
+
+FetchContent_Declare(boringssl
+        GIT_REPOSITORY "https://boringssl.googlesource.com/boringssl"
+        GIT_TAG "origin/master"
+        GIT_SHALLOW ON
+)
+
+FetchContent_GetProperties(boringssl)
+if(NOT boringssl_POPULATED)
+    FetchContent_MakeAvailable(boringssl)
+endif()
+
+set(BORINGSSL_SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/_deps/boringssl-src")
+set(BORINGSSL_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/_deps/boringssl-build")
+
+set(BORINGSSL_INSTALL_DIR "${BORINGSSL_SOURCE_DIR}/install")
+
+if(NOT EXISTS "${BORINGSSL_INSTALL_DIR}")
+    execute_process(COMMAND "${CMAKE_COMMAND}"
+            "-DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}"
+            "-DANDROID_ABI=${ANDROID_ABI}"
+            "-DANDROID_PLATFORM=android-29"
+            "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
+            "-DOPENSSL_SMALL=ON"
+            "-GNinja"
+            "-S" "${BORINGSSL_SOURCE_DIR}"
+            "-B" "${BORINGSSL_BUILD_DIR}"
+        )
+    execute_process(COMMAND "${CMAKE_COMMAND}"
+            "--build"
+            "${BORINGSSL_BUILD_DIR}"
+            "--target" "crypto"
+            "--target" "ssl"
+            "--target" "install"
+        )
+endif()
+
+set(OPENSSL_ROOT_DIR "${BORINGSSL_INSTALL_DIR}")
+list(APPEND CMAKE_FIND_ROOT_PATH "${OPENSSL_ROOT_DIR}")
 
 # OPUS
 
@@ -56,6 +95,18 @@ add_dependencies(srtctest opus)
 target_link_libraries(
         srtctest
         libopus.a
+)
+
+# srtc
+
+add_subdirectory(
+     "srtc"
+)
+
+add_dependencies(srtctest srtc)
+
+target_link_libraries(srtctest
+        srtc
 )
 
 # LibSRTP
