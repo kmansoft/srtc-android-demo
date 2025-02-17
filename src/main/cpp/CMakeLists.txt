@@ -29,6 +29,8 @@ target_link_libraries(srtctest
 # BoringSSL
 # Has to be available during configure because dependencies do find_package(OPENSSL)
 
+set(FETCHCONTENT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/${CMAKE_ANDROID_ARCH}")
+
 FetchContent_Declare(boringssl
         GIT_REPOSITORY "https://boringssl.googlesource.com/boringssl"
         GIT_TAG "origin/master"
@@ -40,10 +42,9 @@ if(NOT boringssl_POPULATED)
     FetchContent_MakeAvailable(boringssl)
 endif()
 
-set(BORINGSSL_SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/_deps/boringssl-src")
-set(BORINGSSL_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/_deps/boringssl-build")
-
+set(BORINGSSL_SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/boringssl-src")
 set(BORINGSSL_INSTALL_DIR "${BORINGSSL_SOURCE_DIR}/install")
+set(BORINGSSL_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/_deps/boringssl-build")
 
 if(NOT EXISTS "${BORINGSSL_INSTALL_DIR}")
     execute_process(COMMAND "${CMAKE_COMMAND}"
