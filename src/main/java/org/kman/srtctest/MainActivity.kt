@@ -493,6 +493,10 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             mEncoder = null
             mEncoderTarget?.release()
             mEncoderTarget = null
+            mPeerConnection?.release()
+            mPeerConnection = null
+
+            showConnectUI(true)
         }
 
         val stateId = when (state) {
