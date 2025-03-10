@@ -100,9 +100,10 @@ void ClassMap::callVoidMethod(JNIEnv* env, jobject obj, const char* name...)
 
     va_list ap;
     va_start(ap, name);
-    va_end(ap);
 
     env->CallVoidMethodV(obj, iter->second, ap);
+
+    va_end(ap);
 }
 
 jint ClassMap::callIntMethod(JNIEnv* env, jobject obj, const char* name...)
@@ -112,9 +113,12 @@ jint ClassMap::callIntMethod(JNIEnv* env, jobject obj, const char* name...)
 
     va_list ap;
     va_start(ap, name);
+
+    const auto res = env->CallIntMethodV(obj, iter->second, ap);
+
     va_end(ap);
 
-    return env->CallIntMethodV(obj, iter->second, ap);
+    return res;
 }
 
 jobject ClassMap::callObjectMethod(JNIEnv* env, jobject obj, const char* name...)
@@ -124,9 +128,12 @@ jobject ClassMap::callObjectMethod(JNIEnv* env, jobject obj, const char* name...
 
     va_list ap;
     va_start(ap, name);
+
+    const auto res = env->CallObjectMethodV(obj, iter->second, ap);
+
     va_end(ap);
 
-    return env->CallObjectMethodV(obj, iter->second, ap);
+    return res;
 }
 
 jobject ClassMap::newObject(JNIEnv* env, ...)

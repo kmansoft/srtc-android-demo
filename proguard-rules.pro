@@ -20,6 +20,6 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
--keepnames class org.kman.srtctest.rtc.** {
+-keep class org.kman.srtctest.rtc.** {
     *;
 }
