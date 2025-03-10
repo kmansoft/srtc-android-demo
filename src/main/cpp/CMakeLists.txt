@@ -109,8 +109,3 @@ add_dependencies(srtctest srtc)
 target_link_libraries(srtctest
         srtc
 )
-
-# LibSRTP
-
-target_link_directories(srtctest PRIVATE
-        "${CMAKE_CURRENT_BINARY_DIR}/srtc/srtp-prefix/src/srtp-build")
