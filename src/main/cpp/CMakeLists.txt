@@ -29,7 +29,7 @@ target_link_libraries(srtctest
 # BoringSSL
 # Has to be available during configure because dependencies do find_package(OPENSSL)
 
-set(FETCHCONTENT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/${CMAKE_ANDROID_ARCH}")
+set(FETCHCONTENT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/${CMAKE_ANDROID_ARCH}-${CMAKE_BUILD_TYPE}")
 
 FetchContent_Declare(boringssl
         GIT_REPOSITORY "https://boringssl.googlesource.com/boringssl"
@@ -43,8 +43,8 @@ if(NOT boringssl_POPULATED)
 endif()
 
 set(BORINGSSL_SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/boringssl-src")
-set(BORINGSSL_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/_deps/boringssl-build-${CMAKE_BUILD_TYPE}")
-set(BORINGSSL_INSTALL_DIR "${BORINGSSL_BUILD_DIR}/install")
+set(BORINGSSL_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/_deps/boringssl-build")
+set(BORINGSSL_INSTALL_DIR "${BORINGSSL_SOURCE_DIR}/install")
 
 if(NOT EXISTS "${BORINGSSL_INSTALL_DIR}")
     execute_process(COMMAND "${CMAKE_COMMAND}"
@@ -60,9 +60,7 @@ if(NOT EXISTS "${BORINGSSL_INSTALL_DIR}")
     execute_process(COMMAND "${CMAKE_COMMAND}"
             "--build"
             "${BORINGSSL_BUILD_DIR}"
-            "--target" "crypto"
-            "--target" "ssl"
-            "--target" "install"
+            "--target" "crypto" "ssl" "install"
         )
 endif()
 
