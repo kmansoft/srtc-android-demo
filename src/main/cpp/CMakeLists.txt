@@ -43,15 +43,15 @@ if(NOT boringssl_POPULATED)
 endif()
 
 set(BORINGSSL_SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/boringssl-src")
-set(BORINGSSL_INSTALL_DIR "${BORINGSSL_SOURCE_DIR}/install")
-set(BORINGSSL_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/_deps/boringssl-build")
+set(BORINGSSL_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/_deps/boringssl-build-${CMAKE_BUILD_TYPE}")
+set(BORINGSSL_INSTALL_DIR "${BORINGSSL_BUILD_DIR}/install")
 
 if(NOT EXISTS "${BORINGSSL_INSTALL_DIR}")
     execute_process(COMMAND "${CMAKE_COMMAND}"
             "-DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}"
+            "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}"
             "-DANDROID_ABI=${ANDROID_ABI}"
             "-DANDROID_PLATFORM=android-29"
-            "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
             "-DOPENSSL_SMALL=ON"
             "-GNinja"
             "-S" "${BORINGSSL_SOURCE_DIR}"
