@@ -33,7 +33,7 @@ set(FETCHCONTENT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/${CMAKE_ANDROID_ARCH
 
 FetchContent_Declare(boringssl
         GIT_REPOSITORY "https://boringssl.googlesource.com/boringssl"
-        GIT_TAG "origin/master"
+        GIT_TAG "origin/main"
         GIT_SHALLOW ON
 )
 
