@@ -43,22 +43,40 @@ public class PeerConnection {
         public String cname = UUID.randomUUID().toString();
     }
 
-    public static class PubVideoCodecConfig {
-        public PubVideoCodecConfig(int codec, int profileLevelId) {
+    public static class PubVideoCodec {
+        public PubVideoCodec(int codec, int profileLevelId) {
             this.codec = codec;
             this.profileLevelId = profileLevelId;
         }
 
-        public int codec;
-        public int profileLevelId;
+        public final int codec;
+        public final int profileLevelId;
+    }
+
+    public static class PubVideoSimulcastLayer {
+        PubVideoSimulcastLayer(@NonNull String name,
+                               int width, int height,
+                               int kilobitPerSecond) {
+            this.name = name;
+            this.width = width;
+            this.height = height;
+            this.kilobitPerSecond = kilobitPerSecond;
+        }
+
+        @NonNull
+        public final String name;
+        public final int width;
+        public final int height;
+        public final int kilobitPerSecond;
     }
 
     public static class PubVideoConfig {
-        public final ArrayList<PubVideoCodecConfig> list = new ArrayList<>();
+        public final ArrayList<PubVideoCodec> codecList = new ArrayList<>();
+        public final ArrayList<PubVideoSimulcastLayer> simulcastLayerList = new ArrayList<>();
     }
 
-    public static class PubAudioCodecConfig {
-        public PubAudioCodecConfig(int codec, int minPacketTimeMs) {
+    public static class PubAudioCodec {
+        public PubAudioCodec(int codec, int minPacketTimeMs) {
             this.codec = codec;
             this.minPacketTimeMs = minPacketTimeMs;
         }
@@ -69,7 +87,7 @@ public class PeerConnection {
 
     public static class PubAudioConfig {
         @NonNull
-        public ArrayList<PubAudioCodecConfig> list = new ArrayList<>();
+        public final ArrayList<PubAudioCodec> codecList = new ArrayList<>();
     }
 
     @NonNull

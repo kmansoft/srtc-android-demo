@@ -334,29 +334,29 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             return
         }
 
-        videoConfig.list.add(
+        videoConfig.codecList.add(
             // Baseline
-            PeerConnection.PubVideoCodecConfig(PeerConnection.VIDEO_CODEC_H264, 0x42001f),
+            PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_H264, 0x42001f),
         )
 
         val capsH264 = codecH264.getCapabilitiesForType(MIME_VIDEO_H264)
         if (isProfileSupported(capsH264, MediaCodecInfo.CodecProfileLevel.AVCProfileConstrainedBaseline)) {
             // Baseline constrained
-            videoConfig.list.add(
-                PeerConnection.PubVideoCodecConfig(PeerConnection.VIDEO_CODEC_H264, 0x42e01f)
+            videoConfig.codecList.add(
+                PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_H264, 0x42e01f)
             )
         }
         if (isProfileSupported(capsH264, MediaCodecInfo.CodecProfileLevel.AVCProfileMain)) {
             // Main
-            videoConfig.list.add(
-                PeerConnection.PubVideoCodecConfig(PeerConnection.VIDEO_CODEC_H264, 0x4d001f)
+            videoConfig.codecList.add(
+                PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_H264, 0x4d001f)
             )
         }
 
         // Audio config
         val audioConfig = PeerConnection.PubAudioConfig()
-        audioConfig.list.add(
-            PeerConnection.PubAudioCodecConfig(PeerConnection.AUDIO_CODEC_OPUS, RECORDER_CHUNK_MS)
+        audioConfig.codecList.add(
+            PeerConnection.PubAudioCodec(PeerConnection.AUDIO_CODEC_OPUS, RECORDER_CHUNK_MS)
         )
 
         val offer = try {
