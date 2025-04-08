@@ -54,7 +54,7 @@ public class PeerConnection {
     }
 
     public static class PubVideoSimulcastLayer {
-        PubVideoSimulcastLayer(@NonNull String name,
+        public PubVideoSimulcastLayer(@NonNull String name,
                                int width, int height,
                                int kilobitPerSecond) {
             this.name = name;
@@ -94,6 +94,10 @@ public class PeerConnection {
     public String initPublishOffer(@NonNull OfferConfig config,
                                    @Nullable PubVideoConfig video,
                                    @Nullable PubAudioConfig audio) throws SRtcException {
+        if (video != null && video.simulcastLayerList.size() > 3) {
+            throw new IllegalArgumentException("A maximum of 3 simulcast layers is supported");
+        }
+
         synchronized (mHandleLock) {
             return initPublishOfferImpl(mHandle, config, video, audio);
         }
@@ -105,9 +109,9 @@ public class PeerConnection {
         }
     }
 
-    public Track getVideoTrack() {
+    public Track getVideoSingleTrack() {
         synchronized (mHandleLock) {
-            return mVideoTrack;
+            return mVideoSingleTrack;
         }
     }
 
@@ -210,7 +214,7 @@ public class PeerConnection {
     private final Object mHandleLock = new Object();
 
     private long mHandle;
-    private Track mVideoTrack;
+    private Track mVideoSingleTrack;
     private Track mAudioTrack;
 
     private final Object mListenerLock = new Object();

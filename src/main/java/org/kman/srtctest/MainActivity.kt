@@ -33,6 +33,7 @@ import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
 import androidx.core.content.ContextCompat
@@ -63,6 +64,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
         mEditWhipServer = findViewById(R.id.whip_server)
         mEditWhipToken = findViewById(R.id.whip_token)
+        mCheckIsSimulcast = findViewById(R.id.whip_simulcast)
         mButtonConnect = findViewById(R.id.whip_connect)
         mSurfaceViewPreview = findViewById(R.id.preview)
         mViewGroupBottomBar = findViewById(R.id.bottom_bar)
@@ -353,6 +355,28 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             )
         }
 
+        // Simulcast
+        if (mCheckIsSimulcast.isChecked) {
+            var size = Size(PUBLISH_VIDEO_WIDTH, PUBLISH_VIDEO_HEIGHT)
+            if (mCameraOrientation == 90 || mCameraOrientation == 270) {
+                size = Size(size.height, size.width)
+            }
+
+            val sizeLow = Size(size.width / 4, size.height / 4)
+            val sizeMid = Size(size.width / 2, size.height / 2)
+            val sizeHigh = Size(size.width, size.height)
+
+            videoConfig.simulcastLayerList.add(PeerConnection.PubVideoSimulcastLayer(
+                "low", sizeLow.width, sizeLow.height, BITRATE_LOW
+            ))
+            videoConfig.simulcastLayerList.add(PeerConnection.PubVideoSimulcastLayer(
+                "mid", sizeMid.width, sizeMid.height, BITRATE_MID
+            ))
+            videoConfig.simulcastLayerList.add(PeerConnection.PubVideoSimulcastLayer(
+                "hi", sizeHigh.width, sizeHigh.height, BITRATE_HIGH
+            ))
+        }
+
         // Audio config
         val audioConfig = PeerConnection.PubAudioConfig()
         audioConfig.codecList.add(
@@ -411,17 +435,17 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     }
 
     private fun onPublishSdpCompleted() {
-        val videoTrack = mPeerConnection?.videoTrack
+        val videoSingleTrack = mPeerConnection?.videoSingleTrack
         val audioTrack = mPeerConnection?.audioTrack
 
-        MyLog.i(TAG, "Video track: %s", videoTrack)
+        MyLog.i(TAG, "Video single track: %s", videoSingleTrack)
         MyLog.i(TAG, "Audio track: %s", audioTrack)
 
-        if (videoTrack != null && mEncoder == null) {
-            val codecMime = when(videoTrack.codec) {
+        if (videoSingleTrack != null && mEncoder == null) {
+            val codecMime = when(videoSingleTrack.codec) {
                 PeerConnection.VIDEO_CODEC_H264 -> MIME_VIDEO_H264
                 else -> {
-                    Util.toast(this, R.string.error_unsupported_video_codec, videoTrack.codec)
+                    Util.toast(this, R.string.error_unsupported_video_codec, videoSingleTrack.codec)
                     return
                 }
             }
@@ -433,19 +457,18 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             } else {
                 MyLog.i(TAG, "Encoder for %s: %s", codecMime, codecInfo.name)
 
-                var size = Size(1280, 720)
-
+                var size = Size(PUBLISH_VIDEO_WIDTH, PUBLISH_VIDEO_HEIGHT)
                 if (mCameraOrientation == 90 || mCameraOrientation == 270) {
                     size = Size(size.height, size.width)
                 }
 
                 val format = MediaFormat.createVideoFormat(codecMime, size.width, size.height).apply {
-                    setInteger(MediaFormat.KEY_BIT_RATE, 2000000)
+                    setInteger(MediaFormat.KEY_BIT_RATE, BITRATE_HIGH * 1000)
                     setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
                     setInteger(MediaFormat.KEY_FRAME_RATE, 15)
                     setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
-                    if (videoTrack.codec == PeerConnection.VIDEO_CODEC_H264) {
-                        val profileLevelId = videoTrack.profileLevelId
+                    if (videoSingleTrack.codec == PeerConnection.VIDEO_CODEC_H264) {
+                        val profileLevelId = videoSingleTrack.profileLevelId
                         setInteger(
                             MediaFormat.KEY_PROFILE,
                             findEncoderProfile(profileLevelId shr 8)
@@ -817,6 +840,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
     private lateinit var mEditWhipServer: EditText
     private lateinit var mEditWhipToken: EditText
+    private lateinit var mCheckIsSimulcast: CheckBox
     private lateinit var mButtonConnect: Button
     private lateinit var mSurfaceViewPreview: SurfaceView
     private lateinit var mViewGroupBottomBar: ViewGroup
@@ -954,5 +978,12 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         private const val RECORDER_CHUNK_MS = 20
         private const val RECORDER_CHANNELS = 1
         private const val RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT
+
+        private const val PUBLISH_VIDEO_WIDTH = 1280
+        private const val PUBLISH_VIDEO_HEIGHT = 720
+
+        private const val BITRATE_LOW = 500
+        private const val BITRATE_MID = 1500
+        private const val BITRATE_HIGH = 2500
     }
 }

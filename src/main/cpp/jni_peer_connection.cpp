@@ -24,6 +24,7 @@ srtc::android::ClassMap gClassPeerConnection;
 srtc::android::ClassMap gClassTrack;
 srtc::android::ClassMap gClassOfferConfig;
 srtc::android::ClassMap gClassVideoCodec;
+srtc::android::ClassMap gClassVideoSimulcastLayer;
 srtc::android::ClassMap gClassVideoConfig;
 srtc::android::ClassMap gClassAudioCodec;
 srtc::android::ClassMap gClassAudioConfig;
@@ -112,38 +113,57 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
     };
 
     // Video
-    std::vector<srtc::PubVideoCodecConfig> videoList;
+    std::vector<srtc::PubVideoCodec> videoCodecList;
+    std::vector<srtc::PubVideoSimulcastLayer> videoSimulcastLayerList;
 
     if (video) {
-        const auto itemListJni = gClassVideoConfig.getFieldObject(env, video, "codecList");
+        const auto codecListJni = gClassVideoConfig.getFieldObject(env, video, "codecList");
         for (jsize i = 0;
-            i < gClassJavaUtilArrayList.callIntMethod(env, itemListJni, "size"); i += 1) {
-            const auto itemJni = gClassJavaUtilArrayList.callObjectMethod(env, itemListJni, "get", i);
-            videoList.push_back(srtc::PubVideoCodecConfig{
-                .codec = static_cast<srtc::Codec>(gClassVideoCodec.getFieldInt(env, itemJni, "codec")),
-                .profileLevelId = static_cast<uint32_t>(gClassVideoCodec.getFieldInt(env, itemJni, "profileLevelId"))
+             i < gClassJavaUtilArrayList.callIntMethod(env, codecListJni, "size"); i += 1) {
+            const auto itemJni = gClassJavaUtilArrayList.callObjectMethod(env, codecListJni, "get", i);
+            videoCodecList.push_back(
+                srtc::PubVideoCodec {
+                    .codec = static_cast<srtc::Codec>(gClassVideoCodec.getFieldInt(env, itemJni, "codec")),
+                    .profileLevelId = static_cast<uint32_t>(gClassVideoCodec.getFieldInt(env, itemJni,
+                                                                                         "profileLevelId"))
+            });
+        }
+
+        const auto simulcastListJni = gClassVideoConfig.getFieldObject(env, video, "simulcastLayerList");
+        for (jsize i = 0;
+             i < gClassJavaUtilArrayList.callIntMethod(env, simulcastListJni, "size"); i += 1) {
+            const auto itemJni = gClassJavaUtilArrayList.callObjectMethod(env, simulcastListJni, "get", i);
+            videoSimulcastLayerList.push_back(
+                srtc::PubVideoSimulcastLayer {
+                    .name = gClassVideoSimulcastLayer.getFieldString(env, itemJni, "name"),
+                    .width = static_cast<uint16_t>(gClassVideoSimulcastLayer.getFieldInt(env, itemJni, "width")),
+                    .height = static_cast<uint16_t>(gClassVideoSimulcastLayer.getFieldInt(env, itemJni, "height")),
+                    .kilobitPerSecond = static_cast<uint32_t>(gClassVideoSimulcastLayer.getFieldInt(env, itemJni, "kilobitPerSecond"))
             });
         }
     }
 
-    const srtc::PubVideoConfig videoConfig { videoList };
+    const srtc::PubVideoConfig videoConfig {
+        .codecList = videoCodecList,
+        .simulcastLayerList = videoSimulcastLayerList
+    };
 
     // Audio
-    std::vector<srtc::PubAudioCodecConfig> audioList;
+    std::vector<srtc::PubAudioCodec> audioCodecList;
 
     if (audio) {
         const auto itemListJni = gClassAudioConfig.getFieldObject(env, audio, "codecList");
         for (jsize i = 0;
             i < gClassJavaUtilArrayList.callIntMethod(env, itemListJni, "size"); i += 1) {
             const auto itemJni = gClassJavaUtilArrayList.callObjectMethod(env, itemListJni, "get", i);
-            audioList.push_back(srtc::PubAudioCodecConfig{
+            audioCodecList.push_back(srtc::PubAudioCodec{
                     .codec = static_cast<srtc::Codec>(gClassAudioCodec.getFieldInt(env, itemJni, "codec")),
                     .minPacketTimeMs = static_cast<uint32_t>(gClassAudioCodec.getFieldInt(env, itemJni, "minPacketTimeMs"))
             });
         }
     }
 
-    const srtc::PubAudioConfig audioConfig { audioList };
+    const srtc::PubAudioConfig audioConfig { .codecList = audioCodecList };
 
     // Create the offer
     std::string outSdpOffer;
@@ -195,18 +215,21 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
         return;
     }
 
-    const auto videoTrack = ptr->mConn->getVideoTrack();
+    const auto videoSingleTrack = ptr->mConn->getVideoSingleTrack();
+    const auto videoSimulcastTrackList = ptr->mConn->getVideoSimulcastTrackList();
     const auto audioTrack = ptr->mConn->getAudioTrack();
 
     jobject videoTrackJ = nullptr;
-    if (videoTrack) {
+    if (videoSingleTrack) {
         videoTrackJ = gClassTrack.newObject(env,
-                                            static_cast<jint>(videoTrack->getTrackId()),
-                                            static_cast<jint>(videoTrack->getPayloadId()),
-                                            static_cast<jint>(videoTrack->getCodec()),
-                                            static_cast<jint>(videoTrack->getProfileLevelId()));
+                                            static_cast<jint>(videoSingleTrack->getTrackId()),
+                                            static_cast<jint>(videoSingleTrack->getPayloadId()),
+                                            static_cast<jint>(videoSingleTrack->getCodec()),
+                                            static_cast<jint>(videoSingleTrack->getProfileLevelId()));
+        gClassPeerConnection.setFieldObject(env, thiz, "mVideoSingleTrack", videoTrackJ);
+    } else if (!videoSimulcastTrackList.empty()) {
+
     }
-    gClassPeerConnection.setFieldObject(env, thiz, "mVideoTrack", videoTrackJ);
 
     jobject audioTrackJ = nullptr;
     if (audioTrack) {
@@ -313,7 +336,7 @@ void JavaPeerConnection::initializeJNI(JNIEnv *env)
             .findMethod(env, "get", "(I)Ljava/lang/Object;");
 
     gClassPeerConnection.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection")
-            .findField(env, "mVideoTrack", "L" SRTC_PACKAGE_NAME "/Track;")
+            .findField(env, "mVideoSingleTrack", "L" SRTC_PACKAGE_NAME "/Track;")
             .findField(env, "mAudioTrack", "L" SRTC_PACKAGE_NAME "/Track;")
             .findMethod(env, "fromNativeOnConnectionState", "(I)V");
 
@@ -331,10 +354,19 @@ void JavaPeerConnection::initializeJNI(JNIEnv *env)
             .findField(env, "codec", "I")
             .findField(env, "profileLevelId", "I");
 
+    // PubVideoSimulcastLayer
+
+    gClassVideoSimulcastLayer.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$PubVideoSimulcastLayer")
+            .findField(env, "name", "Ljava/lang/String;")
+            .findField(env, "width", "I")
+            .findField(env, "height", "I")
+            .findField(env, "kilobitPerSecond", "I");
+
     // PubVideoConfig
 
     gClassVideoConfig.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$PubVideoConfig")
-            .findField(env, "codecList", "Ljava/util/ArrayList;");
+            .findField(env, "codecList", "Ljava/util/ArrayList;")
+            .findField(env, "simulcastLayerList", "Ljava/util/ArrayList;");
 
     // PubAudioCodecConfig
 
