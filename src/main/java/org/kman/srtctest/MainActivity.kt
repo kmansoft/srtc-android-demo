@@ -886,7 +886,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             try {
                 mPeerConnection?.publishVideoFrame(buffer)
             } catch (x: Exception) {
-                Util.toast(this@MainActivity, R.string.error_publishing_video_frame, x.message)
+                reportErrorToast(R.string.error_publishing_video_frame, x.message)
             } finally {
                 codec.releaseOutputBuffer(index, false)
             }
@@ -914,8 +914,14 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 try {
                     mPeerConnection?.setVideoCodecSpecificData(csdList.toTypedArray())
                 } catch (x: Exception) {
-                    Util.toast(this@MainActivity, R.string.error_setting_video_frame_csd, x.message)
+                    reportErrorToast(R.string.error_setting_video_frame_csd, x.message)
                 }
+            }
+        }
+
+        private fun reportErrorToast(resourceId: Int, message: String?) {
+            this@MainActivity.mMainHandler.post {
+                Util.toast(this@MainActivity, resourceId, message)
             }
         }
     }
