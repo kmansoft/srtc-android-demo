@@ -16,7 +16,7 @@ public:
     explicit JavaPeerConnection(jobject thiz);
     ~JavaPeerConnection();
 
-    [[nodiscard]] Error publishVideoFrame(ByteBuffer&& frame);
+    [[nodiscard]] Error publishVideoSingleFrame(ByteBuffer&& frame);
     [[nodiscard]] Error publishAudioFrame(const void* frame,
                                           size_t size,
                                           int sampleRate,

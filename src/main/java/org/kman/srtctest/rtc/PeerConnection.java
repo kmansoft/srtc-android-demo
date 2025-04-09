@@ -53,26 +53,9 @@ public class PeerConnection {
         public final int profileLevelId;
     }
 
-    public static class PubVideoSimulcastLayer {
-        public PubVideoSimulcastLayer(@NonNull String name,
-                               int width, int height,
-                               int kilobitPerSecond) {
-            this.name = name;
-            this.width = width;
-            this.height = height;
-            this.kilobitPerSecond = kilobitPerSecond;
-        }
-
-        @NonNull
-        public final String name;
-        public final int width;
-        public final int height;
-        public final int kilobitPerSecond;
-    }
-
     public static class PubVideoConfig {
         public final ArrayList<PubVideoCodec> codecList = new ArrayList<>();
-        public final ArrayList<PubVideoSimulcastLayer> simulcastLayerList = new ArrayList<>();
+        public final ArrayList<SimulcastLayer> simulcastLayerList = new ArrayList<>();
     }
 
     public static class PubAudioCodec {
@@ -115,6 +98,15 @@ public class PeerConnection {
         }
     }
 
+    public List<Track> getVideoSimulcastTrackList() {
+        synchronized (mHandleLock) {
+            if (mVideoSimulcastTrackList == null) {
+                return null;
+            }
+            return new ArrayList<>(mVideoSimulcastTrackList);
+        }
+    }
+
     public Track getAudioTrack() {
         synchronized (mHandleLock) {
             return mAudioTrack;
@@ -141,21 +133,21 @@ public class PeerConnection {
 
     // Publishing frames
 
-    public void setVideoCodecSpecificData(@NonNull ByteBuffer[] array) {
+    public void setVideoSingleCodecSpecificData(@NonNull ByteBuffer[] array) {
         for (ByteBuffer buf : array) {
             buf.position(0);
         }
 
         synchronized (mHandleLock) {
-            setVideoCodecSpecificDataImpl(mHandle, array);
+            setVideoSingleCodecSpecificDataImpl(mHandle, array);
         }
     }
 
-    public void publishVideoFrame(@NonNull ByteBuffer buf) throws SRtcException {
+    public void publishVideoSingleFrame(@NonNull ByteBuffer buf) throws SRtcException {
         assert buf.isDirect();
 
         synchronized (mHandleLock) {
-            publishVideoFrameImpl(mHandle, buf);
+            publishVideoSingleFrameImpl(mHandle, buf);
         }
     }
 
@@ -188,11 +180,11 @@ public class PeerConnection {
     private native void setPublishAnswerImpl(long handle,
                                              @NonNull String answer) throws SRtcException;
 
-    private native void setVideoCodecSpecificDataImpl(long handle,
-                                                     @NonNull ByteBuffer[] array);
+    private native void setVideoSingleCodecSpecificDataImpl(long handle,
+                                                      @NonNull ByteBuffer[] array);
 
-    private native void publishVideoFrameImpl(long handle,
-                                              @NonNull ByteBuffer buf) throws SRtcException;
+    private native void publishVideoSingleFrameImpl(long handle,
+                                                    @NonNull ByteBuffer buf) throws SRtcException;
 
     private native void publishAudioFrameImpl(long handle,
                                               @NonNull ByteBuffer buf,
@@ -215,6 +207,7 @@ public class PeerConnection {
 
     private long mHandle;
     private Track mVideoSingleTrack;
+    private List<Track> mVideoSimulcastTrackList;
     private Track mAudioTrack;
 
     private final Object mListenerLock = new Object();

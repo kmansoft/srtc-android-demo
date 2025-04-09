@@ -1,6 +1,7 @@
 package org.kman.srtctest.rtc;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.util.Locale;
 
@@ -9,11 +10,13 @@ public class Track {
     Track(int trackId,
           int payloadId,
           int codec,
-          int profileLevelId) {
+          int profileLevelId,
+          @Nullable SimulcastLayer layer) {
         mTrackId = trackId;
         mPayloadId = payloadId;
         mCodec = codec;
         mProfileLevelId = profileLevelId;
+        mLayer = layer;
     }
 
     public int getTrackId() {
@@ -36,12 +39,13 @@ public class Track {
     @Override
     public String toString() {
         return String.format(Locale.US,
-                "Track(trackId=%d, payloadId=%d, codec=%d, profileLevelId=%x)",
-                mTrackId, mPayloadId, mCodec, mProfileLevelId);
+                "Track(trackId=%d, payloadId=%d, codec=%d, profileLevelId=%x, layer=%s)",
+                mTrackId, mPayloadId, mCodec, mProfileLevelId, mLayer);
     }
 
     private final int mTrackId;
     private final int mPayloadId;
     private final int mCodec;
     private final int mProfileLevelId;
+    private final SimulcastLayer mLayer;
 }

@@ -44,6 +44,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.json.JSONObject
 import org.kman.srtctest.rtc.PeerConnection
+import org.kman.srtctest.rtc.SimulcastLayer
 import org.kman.srtctest.util.MyLog
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -366,15 +367,21 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             val sizeMid = Size(size.width / 2, size.height / 2)
             val sizeHigh = Size(size.width, size.height)
 
-            videoConfig.simulcastLayerList.add(PeerConnection.PubVideoSimulcastLayer(
-                "low", sizeLow.width, sizeLow.height, BITRATE_LOW
-            ))
-            videoConfig.simulcastLayerList.add(PeerConnection.PubVideoSimulcastLayer(
-                "mid", sizeMid.width, sizeMid.height, BITRATE_MID
-            ))
-            videoConfig.simulcastLayerList.add(PeerConnection.PubVideoSimulcastLayer(
-                "hi", sizeHigh.width, sizeHigh.height, BITRATE_HIGH
-            ))
+            videoConfig.simulcastLayerList.add(
+                SimulcastLayer(
+                    "low", sizeLow.width, sizeLow.height, BITRATE_LOW
+                )
+            )
+            videoConfig.simulcastLayerList.add(
+                SimulcastLayer(
+                    "mid", sizeMid.width, sizeMid.height, BITRATE_MID
+                )
+            )
+            videoConfig.simulcastLayerList.add(
+                SimulcastLayer(
+                    "hi", sizeHigh.width, sizeHigh.height, BITRATE_HIGH
+                )
+            )
         }
 
         // Audio config
@@ -436,9 +443,11 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
     private fun onPublishSdpCompleted() {
         val videoSingleTrack = mPeerConnection?.videoSingleTrack
+        val videoSimulcastTrackList = mPeerConnection?.videoSimulcastTrackList
         val audioTrack = mPeerConnection?.audioTrack
 
         MyLog.i(TAG, "Video single track: %s", videoSingleTrack)
+        MyLog.i(TAG, "Video simulcast track list: %s", videoSimulcastTrackList)
         MyLog.i(TAG, "Audio track: %s", audioTrack)
 
         if (videoSingleTrack != null && mEncoder == null) {
@@ -507,6 +516,13 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     mEncoderTarget = null
                 }
             }
+        } else if (!videoSimulcastTrackList.isNullOrEmpty()) {
+            for (track in videoSimulcastTrackList) {
+                MyLog.i(TAG, "Video simulcast track: %s", track)
+            }
+        } else {
+            MyLog.i(TAG, "Error: no video tracks")
+            Util.toast(this, R.string.error_no_video_tracks)
         }
     }
 
@@ -908,7 +924,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             val buffer = codec.getOutputBuffer(index) ?: return
 
             try {
-                mPeerConnection?.publishVideoFrame(buffer)
+                mPeerConnection?.publishVideoSingleFrame(buffer)
             } catch (x: Exception) {
                 reportErrorToast(R.string.error_publishing_video_frame, x.message)
             } finally {
@@ -936,7 +952,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
             if (csdList.isNotEmpty()) {
                 try {
-                    mPeerConnection?.setVideoCodecSpecificData(csdList.toTypedArray())
+                    mPeerConnection?.setVideoSingleCodecSpecificData(csdList.toTypedArray())
                 } catch (x: Exception) {
                     reportErrorToast(R.string.error_setting_video_frame_csd, x.message)
                 }
