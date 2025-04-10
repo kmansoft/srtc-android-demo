@@ -45,6 +45,7 @@ import okhttp3.Response
 import org.json.JSONObject
 import org.kman.srtctest.rtc.PeerConnection
 import org.kman.srtctest.rtc.SimulcastLayer
+import org.kman.srtctest.rtc.Track
 import org.kman.srtctest.util.MyLog
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -182,26 +183,27 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     }
 
     private fun disconnect() {
-        mPeerConnection?.release()
-        mPeerConnection = null
-
-        mEncoderTarget?.release()
-        mEncoderTarget = null
-
-        // The encoder needs to be released on the encoder thread
-        val encoder = mEncoder
-        mEncoder = null
-
-        if (encoder != null) {
-            mEncoderHandler.blockingCall {
-                encoder.stop()
-                encoder.release()
-            }
-        }
+        releasePeerConnection()
+        releaseEncoders()
 
         if (!isDestroyed) {
             updateCameraSession()
         }
+    }
+
+    private fun releasePeerConnection() {
+        mPeerConnection?.release()
+        mPeerConnection = null
+    }
+
+    private fun releaseEncoders() {
+        mVideoEncoderSingle?.release()
+        mVideoEncoderSingle = null
+
+        for (encoder in mVideoEncoderSimulcastList) {
+            encoder.release()
+        }
+        mVideoEncoderSimulcastList.clear()
     }
 
     private fun hasPermissions(): Boolean {
@@ -310,9 +312,11 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         // Save just in case
         saveFieldsToPrefs(server, token)
 
-        // Release current peer connection
-        mPeerConnection?.release()
-        mPeerConnection = null
+        // Release peer connection
+        releasePeerConnection()
+
+        // Release encoders
+        releaseEncoders()
 
         // And create a new one
         mPeerConnection = PeerConnection().apply {
@@ -450,75 +454,26 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         MyLog.i(TAG, "Video simulcast track list: %s", videoSimulcastTrackList)
         MyLog.i(TAG, "Audio track: %s", audioTrack)
 
-        if (videoSingleTrack != null && mEncoder == null) {
-            val codecMime = when(videoSingleTrack.codec) {
-                PeerConnection.VIDEO_CODEC_H264 -> MIME_VIDEO_H264
-                else -> {
-                    Util.toast(this, R.string.error_unsupported_video_codec, videoSingleTrack.codec)
-                    return
-                }
+        if (videoSingleTrack != null) {
+            var size = Size(PUBLISH_VIDEO_WIDTH, PUBLISH_VIDEO_HEIGHT)
+            if (mCameraOrientation == 90 || mCameraOrientation == 270) {
+                size = Size(size.height, size.width)
             }
-            val codecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
-            val codecInfo = findEncoder(codecList, codecMime, false) ?:
-                    findEncoder(codecList, codecMime, true)
-            if (codecInfo == null) {
-                Util.toast(this, R.string.error_no_encoder)
-            } else {
-                MyLog.i(TAG, "Encoder for %s: %s", codecMime, codecInfo.name)
 
-                var size = Size(PUBLISH_VIDEO_WIDTH, PUBLISH_VIDEO_HEIGHT)
-                if (mCameraOrientation == 90 || mCameraOrientation == 270) {
-                    size = Size(size.height, size.width)
-                }
-
-                val format = MediaFormat.createVideoFormat(codecMime, size.width, size.height).apply {
-                    setInteger(MediaFormat.KEY_BIT_RATE, BITRATE_HIGH * 1000)
-                    setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
-                    setInteger(MediaFormat.KEY_FRAME_RATE, 15)
-                    setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
-                    if (videoSingleTrack.codec == PeerConnection.VIDEO_CODEC_H264) {
-                        val profileLevelId = videoSingleTrack.profileLevelId
-                        setInteger(
-                            MediaFormat.KEY_PROFILE,
-                            findEncoderProfile(profileLevelId shr 8)
-                        )
-                        setInteger(MediaFormat.KEY_LEVEL, findEncoderLevel(profileLevelId and 0xff))
-                        if (profileLevelId shr 8 == H264_PROFILE_MAIN) {
-                            setInteger(MediaFormat.KEY_MAX_B_FRAMES, 0)
-                        }
-                    }
-                }
-
-                mEncoder = try {
-                    MediaCodec.createByCodecName(codecInfo.name)
-                } catch (x: Exception) {
-                    MyLog.i(TAG, "Error creating the encoder: %s", x.message)
-                    Util.toast(this, R.string.error_creating_encoder)
-                    return
-                }
-
-                try {
-                    mEncoder?.setCallback(mEncoderCallback, mEncoderHandler)
-                    mEncoder?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-
-                    val inputSurface = requireNotNull(mEncoder?.createInputSurface())
-
-                    mEncoder?.start()
-
-                    mEncoderTarget = mRenderThread.createTarget(inputSurface, size.width, size.height)
-                } catch (x: Exception) {
-                    MyLog.i(TAG, "Error configuring the encoder: %s", x.message)
-                    Util.toast(this, R.string.error_starting_encoder)
-
-                    mEncoder?.release()
-                    mEncoder = null
-                    mEncoderTarget?.release()
-                    mEncoderTarget = null
-                }
+            if (mVideoEncoderSingle == null) {
+                mVideoEncoderSingle = EncoderWrapper(this, videoSingleTrack, null, size,
+                    mRenderThread, mEncoderHandler)
+                mVideoEncoderSingle?.start()
             }
         } else if (!videoSimulcastTrackList.isNullOrEmpty()) {
             for (track in videoSimulcastTrackList) {
-                MyLog.i(TAG, "Video simulcast track: %s", track)
+                val layer = requireNotNull(track.simulcastLayer)
+                val size = Size(layer.width, layer.height)
+                val encoder = EncoderWrapper(this, track, layer.name, size,
+                    mRenderThread, mEncoderHandler)
+                if (encoder.start()) {
+                    mVideoEncoderSimulcastList.add(encoder)
+                }
             }
         } else {
             MyLog.i(TAG, "Error: no video tracks")
@@ -528,12 +483,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
     private fun onPeerConnectionConnectState(state: Int) {
         if (state == PeerConnection.CONNECTION_STATE_FAILED) {
-            mEncoder?.release()
-            mEncoder = null
-            mEncoderTarget?.release()
-            mEncoderTarget = null
-            mPeerConnection?.release()
-            mPeerConnection = null
+            releasePeerConnection()
+            releaseEncoders()
 
             showConnectUI(true)
         }
@@ -844,6 +795,22 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mTextRms.text = String.format(Locale.US, "rms = %.2f", rms)
     }
 
+    private fun publishVideoFrame(rid: String?, frame: ByteBuffer) {
+        if (rid.isNullOrEmpty()) {
+            mPeerConnection?.publishVideoSingleFrame(frame)
+        } else {
+
+        }
+    }
+
+    private fun setVideoCodecSpecificData(rid: String?, csdList: Array<ByteBuffer>) {
+        if (rid.isNullOrEmpty()) {
+             mPeerConnection?.setVideoSingleCodecSpecificData(csdList)
+        } else {
+
+        }
+    }
+
     private val mMainHandler = Handler(Looper.getMainLooper())
 
     private val mCameraThread = HandlerThread("Camera").apply { start() }
@@ -873,8 +840,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private var mCameraOrientation = 0
     private var mCameraSession: CameraCaptureSession? = null
 
-    private var mEncoder: MediaCodec? = null
-    private var mEncoderTarget: RenderThread.RenderTarget? = null
+    private var mVideoEncoderSingle: EncoderWrapper? = null
+    private val mVideoEncoderSimulcastList = ArrayList<EncoderWrapper>()
 
     private var mCameraTexture: RenderThread.CameraTexture? = null
     private var mPreviewTarget: RenderThread.RenderTarget? = null
@@ -883,6 +850,156 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private val mIsAudioRecordQuit = AtomicBoolean(false)
     private var mAudioRecord: AudioRecord? = null
     private var mAudioThread: Thread? = null
+
+    private class EncoderWrapper(
+        val activity: MainActivity,
+        val track: Track,
+        val rid: String?,
+        val size: Size,
+        val renderThread: RenderThread,
+        val handler: Handler,
+        ) {
+
+        var encoder: MediaCodec? = null
+        var renderTarget: RenderThread.RenderTarget? = null
+
+        fun start(): Boolean {
+            val codec = track.codec
+            val mime = when(codec) {
+                PeerConnection.VIDEO_CODEC_H264 -> MIME_VIDEO_H264
+                else -> {
+                    Util.toast(activity, R.string.error_unsupported_video_codec, codec)
+                    return false
+                }
+            }
+
+            val codecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
+            val codecInfo = activity.findEncoder(codecList, mime, false) ?:
+                    activity.findEncoder(codecList, mime, true)
+            if (codecInfo == null) {
+                Util.toast(activity, R.string.error_no_encoder)
+            } else {
+                MyLog.i(TAG, "Encoder for %s: %s", mime, codecInfo.name)
+
+                val format = MediaFormat.createVideoFormat(mime, size.width, size.height).apply {
+                    setInteger(MediaFormat.KEY_BIT_RATE, BITRATE_HIGH * 1000)
+                    setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
+                    setInteger(MediaFormat.KEY_FRAME_RATE, 15)
+                    setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
+
+                    if (codec == PeerConnection.VIDEO_CODEC_H264) {
+                        val profileLevelId = track.profileLevelId
+                        setInteger(
+                            MediaFormat.KEY_PROFILE,
+                            activity.findEncoderProfile(profileLevelId shr 8)
+                        )
+                        setInteger(MediaFormat.KEY_LEVEL, activity.findEncoderLevel(profileLevelId and 0xff))
+                        if (profileLevelId shr 8 == H264_PROFILE_MAIN) {
+                            setInteger(MediaFormat.KEY_MAX_B_FRAMES, 0)
+                        }
+                    }
+                }
+
+                encoder = try {
+                    MediaCodec.createByCodecName(codecInfo.name)
+                } catch (x: Exception) {
+                    MyLog.i(TAG, "Error creating the encoder: %s", x.message)
+                    Util.toast(activity, R.string.error_creating_encoder)
+                    return false
+                }
+
+                try {
+                    encoder?.setCallback(callback, handler)
+                    encoder?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+
+                    val inputSurface = requireNotNull(encoder?.createInputSurface())
+
+                    encoder?.start()
+
+                    renderTarget = renderThread.createTarget(inputSurface, size.width, size.height)
+                } catch (x: Exception) {
+                    MyLog.i(TAG, "Error configuring the encoder: %s", x.message)
+                    Util.toast(activity, R.string.error_starting_encoder)
+
+                    encoder?.release()
+                    encoder = null
+                    renderTarget?.release()
+                    renderTarget = null
+
+                    return false
+                }
+            }
+
+            return true
+        }
+
+        fun release() {
+            val e = encoder
+            encoder = null
+
+            if (e != null) {
+                handler.blockingCall {
+                    e.stop()
+                    e.release()
+                }
+            }
+        }
+
+        private val callback = object : MediaCodec.Callback() {
+            override fun onInputBufferAvailable(codec: MediaCodec, index: Int) {
+            }
+
+            override fun onOutputBufferAvailable(
+                codec: MediaCodec,
+                index: Int,
+                info: MediaCodec.BufferInfo
+            ) {
+                val buffer = codec.getOutputBuffer(index) ?: return
+
+                try {
+                    activity.publishVideoFrame(rid, buffer)
+                } catch (x: Exception) {
+                    reportErrorToast(R.string.error_publishing_video_frame, x.message)
+                } finally {
+                    codec.releaseOutputBuffer(index, false)
+                }
+            }
+
+            override fun onError(codec: MediaCodec, e: MediaCodec.CodecException) {
+            }
+
+            override fun onOutputFormatChanged(codec: MediaCodec, format: MediaFormat) {
+                val csd0 = format.getByteBuffer("csd-0")
+                val csd1 = format.getByteBuffer("csd-1")
+
+                val csdList = ArrayList<ByteBuffer>()
+
+                if (csd0 != null) {
+                    MyLog.i(TAG,"Encoder format csd0: %d bytes", csd0.limit())
+                    csdList.add(csd0)
+                }
+                if (csd1 != null) {
+                    MyLog.i(TAG,"Encoder format csd1: %d bytes", csd1.limit())
+                    csdList.add(csd1)
+                }
+
+                if (csdList.isNotEmpty()) {
+                    try {
+                        activity.setVideoCodecSpecificData(rid, csdList.toTypedArray())
+                    } catch (x: Exception) {
+                        reportErrorToast(R.string.error_setting_video_frame_csd, x.message)
+                    }
+                }
+            }
+
+            private fun reportErrorToast(resourceId: Int, message: String?) {
+                activity.mMainHandler.post {
+                    Util.toast(activity, resourceId, message)
+                }
+            }
+        }
+
+    }
 
     private val mCameraStateCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(camera: CameraDevice) {
@@ -910,69 +1027,6 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         override fun onConfigureFailed(session: CameraCaptureSession) {
             onCameraSessionConfigureFailed(session)
         }
-    }
-
-    private val mEncoderCallback = object : MediaCodec.Callback() {
-        override fun onInputBufferAvailable(codec: MediaCodec, index: Int) {
-        }
-
-        override fun onOutputBufferAvailable(
-            codec: MediaCodec,
-            index: Int,
-            info: MediaCodec.BufferInfo
-        ) {
-            val buffer = codec.getOutputBuffer(index) ?: return
-
-            try {
-                mPeerConnection?.publishVideoSingleFrame(buffer)
-            } catch (x: Exception) {
-                reportErrorToast(R.string.error_publishing_video_frame, x.message)
-            } finally {
-                codec.releaseOutputBuffer(index, false)
-            }
-        }
-
-        override fun onError(codec: MediaCodec, e: MediaCodec.CodecException) {
-        }
-
-        override fun onOutputFormatChanged(codec: MediaCodec, format: MediaFormat) {
-            val csd0 = format.getByteBuffer("csd-0")
-            val csd1 = format.getByteBuffer("csd-1")
-
-            val csdList = ArrayList<ByteBuffer>()
-
-            if (csd0 != null) {
-                MyLog.i(TAG,"Encoder format csd0: %d bytes", csd0.limit())
-                csdList.add(csd0)
-            }
-            if (csd1 != null) {
-                MyLog.i(TAG,"Encoder format csd1: %d bytes", csd1.limit())
-                csdList.add(csd1)
-            }
-
-            if (csdList.isNotEmpty()) {
-                try {
-                    mPeerConnection?.setVideoSingleCodecSpecificData(csdList.toTypedArray())
-                } catch (x: Exception) {
-                    reportErrorToast(R.string.error_setting_video_frame_csd, x.message)
-                }
-            }
-        }
-
-        private fun reportErrorToast(resourceId: Int, message: String?) {
-            this@MainActivity.mMainHandler.post {
-                Util.toast(this@MainActivity, resourceId, message)
-            }
-        }
-    }
-
-    private fun Handler.blockingCall(r: Runnable) {
-        val latch = CountDownLatch(1)
-        post {
-            r.run()
-            latch.countDown()
-        }
-        latch.await()
     }
 
     companion object {

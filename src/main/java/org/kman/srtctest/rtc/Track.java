@@ -11,12 +11,12 @@ public class Track {
           int payloadId,
           int codec,
           int profileLevelId,
-          @Nullable SimulcastLayer layer) {
+          @Nullable SimulcastLayer simulcastLayer) {
         mTrackId = trackId;
         mPayloadId = payloadId;
         mCodec = codec;
         mProfileLevelId = profileLevelId;
-        mLayer = layer;
+        mSimulcastLayer = simulcastLayer;
     }
 
     public int getTrackId() {
@@ -35,17 +35,21 @@ public class Track {
         return mProfileLevelId;
     }
 
+    public @Nullable SimulcastLayer getSimulcastLayer() {
+        return mSimulcastLayer;
+    }
+
     @NonNull
     @Override
     public String toString() {
         return String.format(Locale.US,
                 "Track(trackId=%d, payloadId=%d, codec=%d, profileLevelId=%x, layer=%s)",
-                mTrackId, mPayloadId, mCodec, mProfileLevelId, mLayer);
+                mTrackId, mPayloadId, mCodec, mProfileLevelId, mSimulcastLayer);
     }
 
     private final int mTrackId;
     private final int mPayloadId;
     private final int mCodec;
     private final int mProfileLevelId;
-    private final SimulcastLayer mLayer;
+    private final SimulcastLayer mSimulcastLayer;
 }
