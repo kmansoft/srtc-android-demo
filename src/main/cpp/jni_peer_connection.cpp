@@ -114,7 +114,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
 
     // Video
     std::vector<srtc::PubVideoCodec> videoCodecList;
-    std::vector<srtc::PubVideoSimulcastLayer> videoSimulcastLayerList;
+    std::vector<srtc::SimulcastLayer> videoSimulcastLayerList;
 
     if (video) {
         const auto codecListJni = gClassVideoConfig.getFieldObject(env, video, "codecList");
@@ -134,7 +134,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
              i < gClassJavaUtilArrayList.callIntMethod(env, simulcastListJni, "size"); i += 1) {
             const auto itemJni = gClassJavaUtilArrayList.callObjectMethod(env, simulcastListJni, "get", i);
             videoSimulcastLayerList.push_back(
-                srtc::PubVideoSimulcastLayer {
+                srtc::SimulcastLayer {
                     .name = gClassSimulcastLayer.getFieldString(env, itemJni, "name"),
                     .width = static_cast<uint16_t>(gClassSimulcastLayer.getFieldInt(env, itemJni, "width")),
                     .height = static_cast<uint16_t>(gClassSimulcastLayer.getFieldInt(env, itemJni, "height")),
@@ -234,7 +234,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
         for (const auto& track : videoSimulcastTrackList) {
             const auto& layer = track->getSimulcastLayer();
 
-            jstring nameJ = env->NewStringUTF(layer.ridName.c_str());
+            jstring nameJ = env->NewStringUTF(layer.name.c_str());
             jobject layerJ = gClassSimulcastLayer.newObject(env,
                                                            nameJ,
                                                            static_cast<jint>(layer.width),
