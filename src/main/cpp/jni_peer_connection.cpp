@@ -325,6 +325,80 @@ Java_org_kman_srtctest_rtc_PeerConnection_publishVideoSingleFrameImpl(JNIEnv *en
 
 extern "C"
 JNIEXPORT void JNICALL
+Java_org_kman_srtctest_rtc_PeerConnection_setVideoSimulcastCodecSpecificDataImpl(JNIEnv *env, jobject thiz,
+                                                                                 jlong handle, jobject layer, jobjectArray array)
+{
+    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection *>(handle);
+    if (!ptr) {
+        return;
+    }
+
+    const auto layerName = gClassSimulcastLayer.getFieldString(env, layer, "name");
+    if (layerName.empty()) {
+        const srtc::Error error = { srtc::Error::Code::InvalidData, "The layer name is empty" };
+        srtc::android::JavaError::throwSRtcException(env, error);
+    }
+
+    std::vector<srtc::ByteBuffer> list;
+
+    for (jsize i = 0; i < env->GetArrayLength(array); i += 1) {
+        const auto item = env->GetObjectArrayElement(array, i);
+
+        const auto itemSize = gClassJavaIoByteBuffer.callIntMethod(env, item, "limit");
+        const auto itemArray = env->NewByteArray(itemSize);
+
+        gClassJavaIoByteBuffer.callObjectMethod(env, item, "get", itemArray, 0, itemSize);
+
+        jboolean isCopy = { false };
+        const auto itemArrayPtr = env->GetByteArrayElements(itemArray, &isCopy);
+
+        list.emplace_back(reinterpret_cast<const uint8_t*>(itemArrayPtr), static_cast<size_t>(itemSize));
+
+        env->ReleaseByteArrayElements(itemArray, itemArrayPtr, JNI_ABORT);
+        env->DeleteLocalRef(itemArray);
+    }
+
+    if (!list.empty()) {
+        const auto error = ptr->mConn->setVideoSimulcastCodecSpecificData(layerName, list);
+        if (error.isError()) {
+            srtc::android::JavaError::throwSRtcException(env, error);
+        }
+    }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_org_kman_srtctest_rtc_PeerConnection_publishVideoSimulcastFrameImpl(JNIEnv *env, jobject thiz,
+                                                                         jlong handle, jobject layer, jobject buf)
+{
+    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
+    if (!ptr) {
+        return;
+    }
+
+    const auto layerName = gClassSimulcastLayer.getFieldString(env, layer, "name");
+    if (layerName.empty()) {
+        const srtc::Error error = { srtc::Error::Code::InvalidData, "The layer name is empty" };
+        srtc::android::JavaError::throwSRtcException(env, error);
+    }
+
+    const auto bufPtr = env->GetDirectBufferAddress(buf);
+    const auto bufSize = gClassJavaIoByteBuffer.callIntMethod(env, buf, "limit");
+
+    srtc::ByteBuffer bb{static_cast<uint8_t *>(bufPtr),
+                        static_cast<size_t>(bufSize)};
+
+    const auto error = ptr->publishVideoSimulcastFrame(layerName, std::move(bb));
+    if (error.isError()) {
+        srtc::android::JavaError::throwSRtcException(env, error);
+        return;
+    }
+}
+
+
+
+extern "C"
+JNIEXPORT void JNICALL
 Java_org_kman_srtctest_rtc_PeerConnection_publishAudioFrameImpl(JNIEnv *env, jobject thiz,
                                                                 jlong handle, jobject buf,
                                                                 jint size,
@@ -434,6 +508,12 @@ JavaPeerConnection::~JavaPeerConnection()
 Error JavaPeerConnection::publishVideoSingleFrame(ByteBuffer&& frame)
 {
     return mConn->publishVideoSingleFrame(std::move(frame));
+}
+
+Error JavaPeerConnection::publishVideoSimulcastFrame(const std::string& layerName,
+                                                     ByteBuffer&& frame)
+{
+    return mConn->publishVideoSimulcastFrame(layerName, std::move(frame));
 }
 
 Error JavaPeerConnection::publishAudioFrame(const void* frame,

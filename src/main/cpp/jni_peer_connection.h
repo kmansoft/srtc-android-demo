@@ -17,6 +17,7 @@ public:
     ~JavaPeerConnection();
 
     [[nodiscard]] Error publishVideoSingleFrame(ByteBuffer&& frame);
+    [[nodiscard]] Error publishVideoSimulcastFrame(const std::string& layerName, ByteBuffer&& frame);
     [[nodiscard]] Error publishAudioFrame(const void* frame,
                                           size_t size,
                                           int sampleRate,
