@@ -151,6 +151,27 @@ public class PeerConnection {
         }
     }
 
+    public void setVideoSimulcastCodecSpecificData(@NonNull SimulcastLayer layer,
+                                                   @NonNull ByteBuffer[] array) {
+        for (ByteBuffer buf : array) {
+            buf.position(0);
+        }
+
+        synchronized (mHandleLock) {
+            setVideoSimulcastCodecSpecificDataImpl(mHandle, layer, array);
+        }
+    }
+
+    public void publishVideoSimulcastFrame(@NonNull SimulcastLayer layer,
+                                           @NonNull ByteBuffer buf) throws SRtcException {
+        assert buf.isDirect();
+
+        synchronized (mHandleLock) {
+            publishVideoSimulcastFrameImpl(mHandle, layer, buf);
+        }
+    }
+
+
     public void publishAudioFrame(@NonNull ByteBuffer buf,
                                   int size,
                                   int sampleRate,
@@ -181,10 +202,18 @@ public class PeerConnection {
                                              @NonNull String answer) throws SRtcException;
 
     private native void setVideoSingleCodecSpecificDataImpl(long handle,
-                                                      @NonNull ByteBuffer[] array);
+                                                            @NonNull ByteBuffer[] array);
 
     private native void publishVideoSingleFrameImpl(long handle,
                                                     @NonNull ByteBuffer buf) throws SRtcException;
+
+    private native void setVideoSimulcastCodecSpecificDataImpl(long handle,
+                                                               @NonNull SimulcastLayer layer,
+                                                               @NonNull ByteBuffer[] array);
+
+    private native void publishVideoSimulcastFrameImpl(long handle,
+                                                       @NonNull SimulcastLayer layer,
+                                                       @NonNull ByteBuffer buf) throws SRtcException;
 
     private native void publishAudioFrameImpl(long handle,
                                               @NonNull ByteBuffer buf,

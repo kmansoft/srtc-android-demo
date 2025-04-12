@@ -461,7 +461,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             }
 
             if (mVideoEncoderSingle == null) {
-                mVideoEncoderSingle = EncoderWrapper(this, videoSingleTrack, null, size,
+                mVideoEncoderSingle = EncoderWrapper(this, videoSingleTrack, size,
                     mRenderThread, mEncoderHandler)
                 mVideoEncoderSingle?.start()
             }
@@ -469,7 +469,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             for (track in videoSimulcastTrackList) {
                 val layer = requireNotNull(track.simulcastLayer)
                 val size = Size(layer.width, layer.height)
-                val encoder = EncoderWrapper(this, track, layer.name, size,
+                val encoder = EncoderWrapper(this, track, size,
                     mRenderThread, mEncoderHandler)
                 if (encoder.start()) {
                     mVideoEncoderSimulcastList.add(encoder)
@@ -795,19 +795,21 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mTextRms.text = String.format(Locale.US, "rms = %.2f", rms)
     }
 
-    private fun publishVideoFrame(rid: String?, frame: ByteBuffer) {
-        if (rid.isNullOrEmpty()) {
-            mPeerConnection?.publishVideoSingleFrame(frame)
+    private fun setVideoCodecSpecificData(track: Track, csdList: Array<ByteBuffer>) {
+        val layer = track.simulcastLayer
+        if (layer == null) {
+            mPeerConnection?.setVideoSingleCodecSpecificData(csdList)
         } else {
-
+            mPeerConnection?.setVideoSimulcastCodecSpecificData(layer, csdList)
         }
     }
 
-    private fun setVideoCodecSpecificData(rid: String?, csdList: Array<ByteBuffer>) {
-        if (rid.isNullOrEmpty()) {
-             mPeerConnection?.setVideoSingleCodecSpecificData(csdList)
+    private fun publishVideoFrame(track: Track, frame: ByteBuffer) {
+        val layer = track.simulcastLayer
+        if (layer == null) {
+            mPeerConnection?.publishVideoSingleFrame(frame)
         } else {
-
+            mPeerConnection?.publishVideoSimulcastFrame(layer, frame)
         }
     }
 
@@ -854,7 +856,6 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private class EncoderWrapper(
         val activity: MainActivity,
         val track: Track,
-        val rid: String?,
         val size: Size,
         val renderThread: RenderThread,
         val handler: Handler,
@@ -957,7 +958,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 val buffer = codec.getOutputBuffer(index) ?: return
 
                 try {
-                    activity.publishVideoFrame(rid, buffer)
+                    activity.publishVideoFrame(track, buffer)
                 } catch (x: Exception) {
                     reportErrorToast(R.string.error_publishing_video_frame, x.message)
                 } finally {
@@ -985,7 +986,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
                 if (csdList.isNotEmpty()) {
                     try {
-                        activity.setVideoCodecSpecificData(rid, csdList.toTypedArray())
+                        activity.setVideoCodecSpecificData(track, csdList.toTypedArray())
                     } catch (x: Exception) {
                         reportErrorToast(R.string.error_setting_video_frame_csd, x.message)
                     }
