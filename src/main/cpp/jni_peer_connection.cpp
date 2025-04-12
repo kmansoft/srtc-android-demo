@@ -138,6 +138,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
                     .name = gClassSimulcastLayer.getFieldString(env, itemJni, "name"),
                     .width = static_cast<uint16_t>(gClassSimulcastLayer.getFieldInt(env, itemJni, "width")),
                     .height = static_cast<uint16_t>(gClassSimulcastLayer.getFieldInt(env, itemJni, "height")),
+                    .framesPerSecond = static_cast<uint16_t>(gClassSimulcastLayer.getFieldInt(env, itemJni, "framesPerSecond")),
                     .kilobitPerSecond = static_cast<uint32_t>(gClassSimulcastLayer.getFieldInt(env, itemJni, "kilobitPerSecond"))
             });
         }
@@ -238,6 +239,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
                                                            nameJ,
                                                            static_cast<jint>(layer.width),
                                                            static_cast<jint>(layer.height),
+                                                           static_cast<jint>(layer.framesPerSecond),
                                                            static_cast<jint>(layer.kilobitPerSecond));
             jobject videoTrackJ = gClassTrack.newObject(env,
                                                         static_cast<jint>(track->getTrackId()),
@@ -435,10 +437,11 @@ void JavaPeerConnection::initializeJNI(JNIEnv *env)
     // SimulcastLayer
 
     gClassSimulcastLayer.findClass(env, SRTC_PACKAGE_NAME "/SimulcastLayer")
-            .findMethod(env, "<init>", "(Ljava/lang/String;III)V")
+            .findMethod(env, "<init>", "(Ljava/lang/String;IIII)V")
             .findField(env, "name", "Ljava/lang/String;")
             .findField(env, "width", "I")
             .findField(env, "height", "I")
+            .findField(env, "framesPerSecond", "I")
             .findField(env, "kilobitPerSecond", "I");
 
     // Track
