@@ -136,6 +136,21 @@ jobject ClassMap::callObjectMethod(JNIEnv* env, jobject obj, const char* name...
     return res;
 }
 
+jboolean ClassMap::callBooleanMethod(JNIEnv* env, jobject obj, const char* name...)
+{
+    const auto iter = mMethodMap.find(name);
+    assert(iter != mMethodMap.end());
+
+    va_list ap;
+    va_start(ap, name);
+
+    const auto res = env->CallBooleanMethodV(obj, iter->second, ap);
+
+    va_end(ap);
+
+    return res;
+}
+
 jobject ClassMap::newObject(JNIEnv* env, ...)
 {
     const auto iter = mMethodMap.find("<init>");

@@ -25,6 +25,7 @@ public:
     void callVoidMethod(JNIEnv* env, jobject obj, const char* name...);
     jint callIntMethod(JNIEnv* env, jobject obj, const char* name...);
     jobject callObjectMethod(JNIEnv* env, jobject obj, const char* name...);
+    jboolean callBooleanMethod(JNIEnv* env, jobject obj, const char* name...);
 
     jobject newObject(JNIEnv* env, ...);
 

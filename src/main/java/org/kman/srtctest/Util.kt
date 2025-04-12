@@ -1,9 +1,11 @@
 package org.kman.srtctest
 
 import android.content.Context
+import android.os.Handler
 import android.widget.Toast
 import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.CountDownLatch
 
 object Util {
 
@@ -40,4 +42,13 @@ object Util {
     }
 
     private var gCurrToast: Toast? = null
+}
+
+fun Handler.blockingCall(r: Runnable) {
+    val latch = CountDownLatch(1)
+    post {
+        r.run()
+        latch.countDown()
+    }
+    latch.await()
 }

@@ -1,8 +1,9 @@
 <resources>
     <string name="app_name">SRTC Test</string>
 
-    <string name="hint_whip_server">Server URL</string>
-    <string name="hint_whip_token">Auth token</string>
+    <string name="whip_hint_server">Server URL</string>
+    <string name="whip_hint_token">Auth token</string>
+    <string name="whip_simulcast">Simulcast (for IVS)</string>
     <string name="whip_connect">Connect</string>
 
     <string name="error_server_missing">Server name is missing</string>
@@ -26,6 +27,7 @@
     <string name="error_opengl">OpenGL error: %s</string>
     <string name="error_no_camera_output_sizes">Error getting camera output sizes</string>
     <string name="error_cannot_create_audio_record">Error starting audio recording</string>
+    <string name="error_no_video_tracks">Error: no video tracks</string>
 
     <string name="sdp_offer_error">SDP offer error: %s</string>
     <string name="sdp_offer_received_sdp_answer">Received SDP answer in %d ms</string>

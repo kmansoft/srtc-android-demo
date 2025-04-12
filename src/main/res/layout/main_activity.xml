@@ -24,20 +24,27 @@
             android:id="@+id/whip_server"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/hint_whip_server"
+            android:hint="@string/whip_hint_server"
             android:inputType="textUri" />
 
         <EditText
             android:id="@+id/whip_token"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/hint_whip_token"
+            android:hint="@string/whip_hint_token"
             android:inputType="textNoSuggestions" />
+
+        <CheckBox
+            android:id="@+id/whip_simulcast"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/whip_simulcast" />
 
         <Button
             android:id="@+id/whip_connect"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:text="@string/whip_connect" />
 
     </LinearLayout>
