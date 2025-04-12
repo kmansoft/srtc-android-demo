@@ -52,7 +52,6 @@ import java.nio.ByteOrder
 import java.nio.ShortBuffer
 import java.nio.charset.StandardCharsets
 import java.util.Locale
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.sqrt
 
@@ -373,17 +372,20 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
             videoConfig.simulcastLayerList.add(
                 SimulcastLayer(
-                    "low", sizeLow.width, sizeLow.height, BITRATE_LOW
+                    "low", sizeLow.width, sizeLow.height,
+                    ENCODE_FRAMES_PER_SECOND, BITRATE_LOW
                 )
             )
             videoConfig.simulcastLayerList.add(
                 SimulcastLayer(
-                    "mid", sizeMid.width, sizeMid.height, BITRATE_MID
+                    "mid", sizeMid.width, sizeMid.height,
+                    ENCODE_FRAMES_PER_SECOND, BITRATE_MID
                 )
             )
             videoConfig.simulcastLayerList.add(
                 SimulcastLayer(
-                    "hi", sizeHigh.width, sizeHigh.height, BITRATE_HIGH
+                    "hi", sizeHigh.width, sizeHigh.height,
+                    ENCODE_FRAMES_PER_SECOND, BITRATE_HIGH
                 )
             )
         }
@@ -885,7 +887,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 val format = MediaFormat.createVideoFormat(mime, size.width, size.height).apply {
                     setInteger(MediaFormat.KEY_BIT_RATE, BITRATE_HIGH * 1000)
                     setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
-                    setInteger(MediaFormat.KEY_FRAME_RATE, 15)
+                    setInteger(MediaFormat.KEY_FRAME_RATE, ENCODE_FRAMES_PER_SECOND)
                     setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
 
                     if (codec == PeerConnection.VIDEO_CODEC_H264) {
@@ -1052,6 +1054,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
         private const val PUBLISH_VIDEO_WIDTH = 1280
         private const val PUBLISH_VIDEO_HEIGHT = 720
+
+        private const val ENCODE_FRAMES_PER_SECOND = 15
 
         private const val BITRATE_LOW = 500
         private const val BITRATE_MID = 1500

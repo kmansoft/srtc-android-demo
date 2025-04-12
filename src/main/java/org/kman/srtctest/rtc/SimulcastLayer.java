@@ -7,10 +7,12 @@ import java.util.Locale;
 public class SimulcastLayer {
     public SimulcastLayer(@NonNull String name,
                           int width, int height,
+                          int framesPerSecond,
                           int kilobitPerSecond) {
         this.name = name;
         this.width = width;
         this.height = height;
+        this.framesPerSecond = framesPerSecond;
         this.kilobitPerSecond = kilobitPerSecond;
     }
 
@@ -27,5 +29,6 @@ public class SimulcastLayer {
     public final String name;
     public final int width;
     public final int height;
+    public final int framesPerSecond;
     public final int kilobitPerSecond;
 }
