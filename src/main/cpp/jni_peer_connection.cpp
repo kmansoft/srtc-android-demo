@@ -172,18 +172,17 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
     const auto offer = std::make_shared<srtc::SdpOffer>(offerConfig,
                                                         video ? srtc::optional(videoConfig) : srtc::nullopt,
                                                         audio ? srtc::optional(audioConfig) : srtc::nullopt);
-    const auto [ offerStr, error1 ] = offer->generate();
+    const auto [ offerStr, offerError ] = offer->generate();
 
-    if (error1.isError()) {
+    if (offerError.isError()) {
         // Throw an exception
-        srtc::android::JavaError::throwSRtcException(env, error1);
+        srtc::android::JavaError::throwSRtcException(env, offerError);
         return nullptr;
     }
 
-    const auto error2 = ptr->mConn->setSdpOffer(offer);
-    if (error2.isError()) {
+    if (const auto setOfferError = ptr->mConn->setSdpOffer(offer); setOfferError.isError()) {
         // Throw an exception
-        srtc::android::JavaError::throwSRtcException(env, error2);
+        srtc::android::JavaError::throwSRtcException(env, setOfferError);
         return nullptr;
     }
 
@@ -193,7 +192,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
 extern "C"
 JNIEXPORT void JNICALL
 Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobject thiz, jlong handle,
-                                                               jstring answer)
+                                                               jstring answerJ)
 {
     const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
     if (!ptr) {
@@ -201,18 +200,17 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
     }
 
     const auto offer = ptr->mConn->getSdpOffer();
-    const auto answerStr = srtc::android::fromJavaString(env, answer);
+    const auto answerStr = srtc::android::fromJavaString(env, answerJ);
     const auto selector = std::make_shared<HighestProfileSelector>();
 
-    std::shared_ptr<srtc::SdpAnswer> outAnswer;
-
-    if (const auto error = srtc::SdpAnswer::parse(offer, answerStr, selector, outAnswer); error.isError()) {
-        srtc::android::JavaError::throwSRtcException(env, error);
+    const auto [ answer, answerError ] = srtc::SdpAnswer::parse(offer, answerStr, selector);
+    if (answerError.isError()) {
+        srtc::android::JavaError::throwSRtcException(env, answerError);
         return;
     }
 
-    if (const auto error = ptr->mConn->setSdpAnswer(outAnswer); error.isError()) {
-        srtc::android::JavaError::throwSRtcException(env, error);
+    if (const auto setAnswerError = ptr->mConn->setSdpAnswer(answer); setAnswerError.isError()) {
+        srtc::android::JavaError::throwSRtcException(env, setAnswerError);
         return;
     }
 
