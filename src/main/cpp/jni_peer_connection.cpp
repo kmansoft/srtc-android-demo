@@ -293,7 +293,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_setVideoSingleCodecSpecificDataImpl(JN
     }
 
     if (!list.empty()) {
-        const auto error = ptr->mConn->setVideoSingleCodecSpecificData(list);
+        const auto error = ptr->mConn->setVideoSingleCodecSpecificData(std::move(list));
         if (error.isError()) {
             srtc::android::JavaError::throwSRtcException(env, error);
         }
@@ -359,7 +359,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_setVideoSimulcastCodecSpecificDataImpl
     }
 
     if (!list.empty()) {
-        const auto error = ptr->mConn->setVideoSimulcastCodecSpecificData(layerName, list);
+        const auto error = ptr->mConn->setVideoSimulcastCodecSpecificData(layerName, std::move(list));
         if (error.isError()) {
             srtc::android::JavaError::throwSRtcException(env, error);
         }
