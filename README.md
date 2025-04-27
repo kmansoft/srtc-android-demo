@@ -16,7 +16,7 @@ Should work with other WHIP implementations too.
 
 Please clone this repository with `--recurse-submodules` to bring in the srtc library and the Opus audio encoder.
 
-Then built the project in Android Studio. For running I suggest starting with the emulator first.
+Then build the project in Android Studio. For running I suggest starting with the emulator first.
 
 #### Testing with Pion
 
