@@ -59,6 +59,14 @@ jint ClassMap::getFieldInt(JNIEnv *env, jobject obj, const char* name) const
     return env->GetIntField(obj, iter->second);
 }
 
+jboolean ClassMap::getFieldBoolean(JNIEnv *env, jobject obj, const char* name) const
+{
+    const auto iter = mFieldMap.find(name);
+    assert(iter != mFieldMap.end());
+
+    return env->GetBooleanField(obj, iter->second);
+}
+
 std::string ClassMap::getFieldString(JNIEnv *env, jobject obj, const char* name) const
 {
     const auto iter = mFieldMap.find(name);

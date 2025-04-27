@@ -17,6 +17,7 @@ public:
 
     [[nodiscard]] jobject getFieldObject(JNIEnv* env, jobject obj, const char* name) const;
     [[nodiscard]] jint getFieldInt(JNIEnv* env, jobject obj, const char* name) const;
+    [[nodiscard]] jboolean getFieldBoolean(JNIEnv* env, jobject obj, const char* name) const;
     [[nodiscard]] std::string getFieldString(JNIEnv* env, jobject obj, const char* name) const;
     [[nodiscard]] jobjectArray getFieldObjectArray(JNIEnv* env, jobject obj, const char* name) const;
 

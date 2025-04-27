@@ -104,14 +104,6 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
         mCameraTexture?.release()
 
-        mIsAudioRecordQuit.set(true)
-        mAudioThread?.join()
-        mAudioThread = null
-
-        mAudioRecord?.stop()
-        mAudioRecord?.release()
-        mAudioRecord = null
-
         disconnect()
 
         mCameraThread.quitSafely()
@@ -145,7 +137,6 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             requestPermissions(arrayOf(PERM_CAMERA, PERM_RECORD_AUDIO), 1)
         } else {
             initCameraCapture()
-            initAudioRecording()
         }
     }
 
@@ -178,7 +169,6 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
 
         initCameraCapture()
-        initAudioRecording()
     }
 
     private fun disconnect() {
@@ -198,6 +188,14 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private fun releaseEncoders() {
         mVideoEncoderSingle?.release()
         mVideoEncoderSingle = null
+
+        mAudioRecord?.stop()
+        mAudioRecord?.release()
+        mAudioRecord = null
+
+        mIsAudioRecordQuit.set(true)
+        mAudioThread?.join()
+        mAudioThread = null
 
         for (encoder in mVideoEncoderSimulcastList) {
             encoder.release()
@@ -393,7 +391,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         // Audio config
         val audioConfig = PeerConnection.PubAudioConfig()
         audioConfig.codecList.add(
-            PeerConnection.PubAudioCodec(PeerConnection.AUDIO_CODEC_OPUS, RECORDER_CHUNK_MS)
+            PeerConnection.PubAudioCodec(PeerConnection.AUDIO_CODEC_OPUS, RECORDER_CHUNK_MS, RECORDER_CHANNELS == 2)
         )
 
         val offer = try {
@@ -481,6 +479,10 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             MyLog.i(TAG, "Error: no video tracks")
             Util.toast(this, R.string.error_no_video_tracks)
         }
+
+        if (audioTrack != null) {
+            initAudioRecording(audioTrack.codecOptions)
+        }
     }
 
     private fun onPeerConnectionConnectState(state: Int) {
@@ -525,25 +527,26 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
     }
 
-    private fun initAudioRecording() {
-        if (!mIsInitAudioDone) {
-            mIsInitAudioDone = true
-
+    private fun initAudioRecording(codecOptions: Track.CodecOptions?) {
+        if (mAudioRecord == null) {
             if (ContextCompat.checkSelfPermission(
                     this,
                     PERM_RECORD_AUDIO
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
+                val minptime = codecOptions?.minptime ?: RECORDER_CHUNK_MS
+                val stereo = codecOptions?.stereo ?: (RECORDER_CHANNELS == 2)
+
                 val bufferSize = AudioRecord.getMinBufferSize(
                     RECORDER_SAMPLE_RATE,
-                    RECORDER_CHANNELS,
+                    if (stereo) 2 else 1,
                     RECORDER_AUDIO_ENCODING
                 )
 
                 val format = AudioFormat.Builder().apply {
                     setSampleRate(RECORDER_SAMPLE_RATE)
                     setChannelMask(
-                        if (RECORDER_CHANNELS == 2) AudioFormat.CHANNEL_IN_STEREO
+                        if (stereo) AudioFormat.CHANNEL_IN_STEREO
                         else AudioFormat.CHANNEL_IN_MONO)
                     setEncoding(RECORDER_AUDIO_ENCODING)
                 }.build()
@@ -562,8 +565,10 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 mAudioRecord = audioRecord
                 mAudioRecord?.startRecording()
 
+                mIsAudioRecordQuit.set(false)
+
                 mAudioThread = Thread {
-                    audioThreadFunc(audioRecord)
+                    audioThreadFunc(audioRecord, minptime, stereo)
                 }.apply {
                     name = "AudioRecord"
                     start()
@@ -714,7 +719,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private fun findEncoderProfile(profileId: Int): Int {
         return when(profileId) {
             H264_PROFILE_BASELINE -> MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline
-            H264_PROFILE_BASELINE_CONSTRAINED -> MediaCodecInfo.CodecProfileLevel.AVCProfileConstrainedBaseline
+            H264_PROFILE_CONSTRAINED_BASELINE -> MediaCodecInfo.CodecProfileLevel.AVCProfileConstrainedBaseline
             H264_PROFILE_MAIN -> MediaCodecInfo.CodecProfileLevel.AVCProfileMain
             else -> MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline
         }
@@ -731,13 +736,13 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
     }
 
-    private fun audioThreadFunc(record: AudioRecord) {
-        val samplesPerChannel = RECORDER_SAMPLE_RATE * RECORDER_CHUNK_MS / 1000
+    private fun audioThreadFunc(record: AudioRecord, minptime: Int, stereo: Boolean) {
+        val samplesPerChannel = RECORDER_SAMPLE_RATE * minptime / 1000
         var chunkSize = samplesPerChannel
         if (RECORDER_AUDIO_ENCODING == AudioFormat.ENCODING_PCM_16BIT) {
             chunkSize *= 2
         }
-        if (RECORDER_CHANNELS == 2) {
+        if (stereo) {
             chunkSize *= 2
         }
 
@@ -760,7 +765,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 try {
                     mPeerConnection?.publishAudioFrame(
                         byteBuffer, r,
-                        RECORDER_SAMPLE_RATE, RECORDER_CHANNELS
+                        RECORDER_SAMPLE_RATE,
+                        if (stereo) 2 else 1
                     )
                 } catch (x: Exception) {
                     mMainHandler.post {
@@ -850,7 +856,6 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private var mCameraTexture: RenderThread.CameraTexture? = null
     private var mPreviewTarget: RenderThread.RenderTarget? = null
 
-    private var mIsInitAudioDone = false
     private val mIsAudioRecordQuit = AtomicBoolean(false)
     private var mAudioRecord: AudioRecord? = null
     private var mAudioThread: Thread? = null
@@ -891,7 +896,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
 
                     if (codec == PeerConnection.VIDEO_CODEC_H264) {
-                        val profileLevelId = track.profileLevelId
+                        val codecOptions = track.codecOptions
+                        val profileLevelId = codecOptions?.profileLevelId ?: H264_PROFILE_BASELINE
                         setInteger(
                             MediaFormat.KEY_PROFILE,
                             activity.findEncoderProfile(profileLevelId shr 8)
@@ -1044,7 +1050,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         private const val MIME_VIDEO_H264 = "video/avc"
 
         private const val H264_PROFILE_BASELINE = 0x4200
-        private const val H264_PROFILE_BASELINE_CONSTRAINED = 0x42e0
+        private const val H264_PROFILE_CONSTRAINED_BASELINE = 0x42e0
         private const val H264_PROFILE_MAIN = 0x4d00
 
         private const val RECORDER_SAMPLE_RATE = 48000

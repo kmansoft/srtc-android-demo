@@ -59,13 +59,15 @@ public class PeerConnection {
     }
 
     public static class PubAudioCodec {
-        public PubAudioCodec(int codec, int minPacketTimeMs) {
+        public PubAudioCodec(int codec, int minptime, boolean stereo) {
             this.codec = codec;
-            this.minPacketTimeMs = minPacketTimeMs;
+            this.minptime = minptime;
+            this.stereo = stereo;
         }
 
         public int codec;
-        public int minPacketTimeMs;
+        public int minptime;
+        public boolean stereo;
     }
 
     public static class PubAudioConfig {
