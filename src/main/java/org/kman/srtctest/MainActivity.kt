@@ -67,8 +67,10 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mEditWhipToken = findViewById(R.id.whip_token)
         mCheckIsSimulcast = findViewById(R.id.whip_simulcast)
         mButtonConnect = findViewById(R.id.whip_connect)
+        mStatusTextView = findViewById(R.id.status)
         mSurfaceViewPreview = findViewById(R.id.preview)
         mViewGroupBottomBar = findViewById(R.id.bottom_bar)
+        mViewGroupInputBar = findViewById(R.id.input_bar)
         mTextRms = findViewById(R.id.audio_rms)
 
         mButtonConnect.setOnClickListener {
@@ -280,169 +282,198 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         if (mIsConnectUIVisible != show) {
             mIsConnectUIVisible = show
 
-            mViewGroupBottomBar.visibility = if (show) View.VISIBLE else View.GONE
+            mViewGroupInputBar.visibility = if (show) View.VISIBLE else View.GONE
+            mButtonConnect.text = getString(if (show) R.string.whip_connect else R.string.whip_disconnect)
         }
     }
 
     private fun onClickConnect() {
-        val server = mEditWhipServer.text.toString().trim()
-        if (server.isEmpty()) {
-            mEditWhipServer.error = getString(R.string.error_server_missing)
-            mEditWhipServer.requestFocus()
-            return
-        }
-        if (!server.contains("://")) {
-            mEditWhipServer.error = getString(R.string.error_server_invalid)
-            mEditWhipServer.requestFocus()
-            return
-        }
-        mEditWhipServer.error = null
+        if (!mIsConnectUIVisible) {
+            releasePeerConnection()
+            releaseEncoders()
 
-        val token = mEditWhipToken.text.toString().trim()
-        if (token.isEmpty()) {
-            mEditWhipToken.error = getString(R.string.error_token_missing)
-            mEditWhipToken.requestFocus()
-            return
-        }
-        mEditWhipToken.error = null
-
-        // Save just in case
-        saveFieldsToPrefs(server, token)
-
-        // Release peer connection
-        releasePeerConnection()
-
-        // Release encoders
-        releaseEncoders()
-
-        // And create a new one
-        mPeerConnection = PeerConnection().apply {
-            setConnectionStateListener { state ->
-                onPeerConnectionConnectState(state)
+            showConnectUI(true)
+        } else {
+            val server = mEditWhipServer.text.toString().trim()
+            if (server.isEmpty()) {
+                mEditWhipServer.error = getString(R.string.error_server_missing)
+                mEditWhipServer.requestFocus()
+                return
             }
-        }
+            if (!server.contains("://")) {
+                mEditWhipServer.error = getString(R.string.error_server_invalid)
+                mEditWhipServer.requestFocus()
+                return
+            }
+            mEditWhipServer.error = null
 
-        // Create the SDP offer
-        val peerConnection = requireNotNull(mPeerConnection)
+            val token = mEditWhipToken.text.toString().trim()
+            if (token.isEmpty()) {
+                mEditWhipToken.error = getString(R.string.error_token_missing)
+                mEditWhipToken.requestFocus()
+                return
+            }
+            mEditWhipToken.error = null
 
-        val offerConfig = PeerConnection.OfferConfig()
+            // Save just in case
+            saveFieldsToPrefs(server, token)
 
-        // Video options
-        val videoConfig = PeerConnection.PubVideoConfig()
+            // Release peer connection
+            releasePeerConnection()
 
-        val codecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
-        val codecH264 = findEncoder(codecList, MIME_VIDEO_H264, false) ?:
-            findEncoder(codecList, MIME_VIDEO_H264, true)
-        if (codecH264 == null) {
-            Util.toast(this, R.string.error_no_encoder)
-            return
-        }
+            // Release encoders
+            releaseEncoders()
 
-        videoConfig.codecList.add(
-            // Baseline
-            PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_H264, 0x42001f),
-        )
-
-        val capsH264 = codecH264.getCapabilitiesForType(MIME_VIDEO_H264)
-        if (isProfileSupported(capsH264, MediaCodecInfo.CodecProfileLevel.AVCProfileConstrainedBaseline)) {
-            // Baseline constrained
-            videoConfig.codecList.add(
-                PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_H264, 0x42e01f)
-            )
-        }
-        if (isProfileSupported(capsH264, MediaCodecInfo.CodecProfileLevel.AVCProfileMain)) {
-            // Main
-            videoConfig.codecList.add(
-                PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_H264, 0x4d001f)
-            )
-        }
-
-        // Simulcast
-        if (mCheckIsSimulcast.isChecked) {
-            var size = Size(PUBLISH_VIDEO_WIDTH, PUBLISH_VIDEO_HEIGHT)
-            if (mCameraOrientation == 90 || mCameraOrientation == 270) {
-                size = Size(size.height, size.width)
+            // And create a new one
+            mPeerConnection = PeerConnection().apply {
+                setConnectionStateListener { state ->
+                    onPeerConnectionConnectState(state)
+                }
             }
 
-            val sizeLow = Size(size.width / 4, size.height / 4)
-            val sizeMid = Size(size.width / 2, size.height / 2)
-            val sizeHigh = Size(size.width, size.height)
+            // Create the SDP offer
+            val peerConnection = requireNotNull(mPeerConnection)
 
-            videoConfig.simulcastLayerList.add(
-                SimulcastLayer(
-                    "low", sizeLow.width, sizeLow.height,
-                    ENCODE_FRAMES_PER_SECOND, BITRATE_LOW
+            val offerConfig = PeerConnection.OfferConfig()
+
+            // Video options
+            val videoConfig = PeerConnection.PubVideoConfig()
+
+            val codecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
+            val codecH264 = findEncoder(codecList, MIME_VIDEO_H264, false) ?: findEncoder(
+                codecList,
+                MIME_VIDEO_H264,
+                true
+            )
+            if (codecH264 == null) {
+                Util.toast(this, R.string.error_no_encoder)
+                return
+            }
+
+            videoConfig.codecList.add(
+                // Baseline
+                PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_H264, 0x42001f),
+            )
+
+            val capsH264 = codecH264.getCapabilitiesForType(MIME_VIDEO_H264)
+            if (isProfileSupported(
+                    capsH264,
+                    MediaCodecInfo.CodecProfileLevel.AVCProfileConstrainedBaseline
                 )
-            )
-            videoConfig.simulcastLayerList.add(
-                SimulcastLayer(
-                    "mid", sizeMid.width, sizeMid.height,
-                    ENCODE_FRAMES_PER_SECOND, BITRATE_MID
+            ) {
+                // Baseline constrained
+                videoConfig.codecList.add(
+                    PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_H264, 0x42e01f)
                 )
-            )
-            videoConfig.simulcastLayerList.add(
-                SimulcastLayer(
-                    "hi", sizeHigh.width, sizeHigh.height,
-                    ENCODE_FRAMES_PER_SECOND, BITRATE_HIGH
+            }
+            if (isProfileSupported(capsH264, MediaCodecInfo.CodecProfileLevel.AVCProfileMain)) {
+                // Main
+                videoConfig.codecList.add(
+                    PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_H264, 0x4d001f)
                 )
-            )
-        }
+            }
 
-        // Audio config
-        val audioConfig = PeerConnection.PubAudioConfig()
-        audioConfig.codecList.add(
-            PeerConnection.PubAudioCodec(PeerConnection.AUDIO_CODEC_OPUS, RECORDER_CHUNK_MS, RECORDER_CHANNELS == 2)
-        )
-
-        val offer = try {
-            peerConnection.initPublishOffer(
-                offerConfig,
-                videoConfig,
-                audioConfig
-            )
-        } catch (x: Exception) {
-            Util.toast(this, R.string.sdp_offer_error, x.message)
-            return
-        }
-
-        showConnectUI(false)
-
-        // offer = Util.loadRawResource(this, R.raw.pub_offer_chrome_v_only)
-
-        val request = Request.Builder().apply {
-            url(server)
-            method("POST", offer.toRequestBody("application/sdp".toMediaType()))
-            header("Authorization", "Bearer $token")
-        }.build()
-
-        val ms0 = SystemClock.elapsedRealtime()
-        HttpClient.execute(request, object : HttpClient.Callback {
-            override fun onCompleted(response: Response?, data: ByteArray?, error: Exception?) {
-                if (error != null) {
-                    Util.toast(this@MainActivity, R.string.sdp_offer_error, error.message)
-                    showConnectUI(true)
-                    return
+            // Simulcast
+            if (mCheckIsSimulcast.isChecked) {
+                var size = Size(PUBLISH_VIDEO_WIDTH, PUBLISH_VIDEO_HEIGHT)
+                if (mCameraOrientation == 90 || mCameraOrientation == 270) {
+                    size = Size(size.height, size.width)
                 }
 
-                if (data != null) {
-                    val ms1 = SystemClock.elapsedRealtime()
-                    Util.toast(this@MainActivity, R.string.sdp_offer_received_sdp_answer, ms1 - ms0)
+                val sizeLow = Size(size.width / 4, size.height / 4)
+                val sizeMid = Size(size.width / 2, size.height / 2)
+                val sizeHigh = Size(size.width, size.height)
 
-                    val answer = String(data, StandardCharsets.UTF_8)
-                    MyLog.i(TAG, "SDP answer:\n%s", answer)
+                videoConfig.simulcastLayerList.add(
+                    SimulcastLayer(
+                        "low", sizeLow.width, sizeLow.height,
+                        ENCODE_FRAMES_PER_SECOND, BITRATE_LOW
+                    )
+                )
+                videoConfig.simulcastLayerList.add(
+                    SimulcastLayer(
+                        "mid", sizeMid.width, sizeMid.height,
+                        ENCODE_FRAMES_PER_SECOND, BITRATE_MID
+                    )
+                )
+                videoConfig.simulcastLayerList.add(
+                    SimulcastLayer(
+                        "hi", sizeHigh.width, sizeHigh.height,
+                        ENCODE_FRAMES_PER_SECOND, BITRATE_HIGH
+                    )
+                )
+            }
 
-                    try {
-                        mPeerConnection?.setPublishAnswer(answer)
-                    } catch (x: Exception) {
-                        Util.toast(this@MainActivity, R.string.error_remote_description, x.message)
+            // Audio config
+            val audioConfig = PeerConnection.PubAudioConfig()
+            audioConfig.codecList.add(
+                PeerConnection.PubAudioCodec(
+                    PeerConnection.AUDIO_CODEC_OPUS,
+                    RECORDER_CHUNK_MS,
+                    RECORDER_CHANNELS == 2
+                )
+            )
+
+            val offer = try {
+                peerConnection.initPublishOffer(
+                    offerConfig,
+                    videoConfig,
+                    audioConfig
+                )
+            } catch (x: Exception) {
+                Util.toast(this, R.string.sdp_offer_error, x.message)
+                return
+            }
+
+            showConnectUI(false)
+
+            // offer = Util.loadRawResource(this, R.raw.pub_offer_chrome_v_only)
+
+            val request = Request.Builder().apply {
+                url(server)
+                method("POST", offer.toRequestBody("application/sdp".toMediaType()))
+                header("Authorization", "Bearer $token")
+            }.build()
+
+            val ms0 = SystemClock.elapsedRealtime()
+            HttpClient.execute(request, object : HttpClient.Callback {
+                override fun onCompleted(response: Response?, data: ByteArray?, error: Exception?) {
+                    if (error != null) {
+                        Util.toast(this@MainActivity, R.string.sdp_offer_error, error.message)
                         showConnectUI(true)
                         return
                     }
 
-                    onPublishSdpCompleted()
+                    if (data != null) {
+                        val ms1 = SystemClock.elapsedRealtime()
+                        Util.toast(
+                            this@MainActivity,
+                            R.string.sdp_offer_received_sdp_answer,
+                            ms1 - ms0
+                        )
+
+                        val answer = String(data, StandardCharsets.UTF_8)
+                        MyLog.i(TAG, "SDP answer:\n%s", answer)
+
+                        mSetAnswerTimeMillis = SystemClock.elapsedRealtime()
+
+                        try {
+                            mPeerConnection?.setPublishAnswer(answer)
+                        } catch (x: Exception) {
+                            Util.toast(
+                                this@MainActivity,
+                                R.string.error_remote_description,
+                                x.message
+                            )
+                            showConnectUI(true)
+                            return
+                        }
+
+                        onPublishSdpCompleted()
+                    }
                 }
-            }
-        })
+            })
+        }
     }
 
     private fun onPublishSdpCompleted() {
@@ -496,8 +527,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         val stateId = when (state) {
             PeerConnection.CONNECTION_STATE_CONNECTING ->
                 R.string.pc_state_connecting
-            PeerConnection.CONNECTION_STATE_CONNECTED ->
+            PeerConnection.CONNECTION_STATE_CONNECTED -> {
                 R.string.pc_state_connected
+            }
             PeerConnection.CONNECTION_STATE_FAILED ->
                 R.string.pc_state_failed
             PeerConnection.CONNECTION_STATE_CLOSED ->
@@ -505,13 +537,21 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             else -> return
         }
 
-        Util.toast(this, R.string.pc_connection_state, getString(stateId))
+        var message = getString(R.string.pc_connection_state, getString(stateId))
+        if (state == PeerConnection.CONNECTION_STATE_CONNECTED) {
+            val elapsed = SystemClock.elapsedRealtime() - mSetAnswerTimeMillis
+            message += " "
+            message += getString(R.string.pc_time_to_connect, elapsed)
+        }
+
+        mStatusTextView.text = message
     }
 
     private fun initCameraCapture() {
         if (!mIsInitCameraDone) {
             mIsInitCameraDone = true
 
+            // Find the camera
             // Find the camera
             val cm = getSystemService(CameraManager::class.java)
             val frontCameraId = cm.cameraIdList.find {
@@ -835,14 +875,17 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private lateinit var mEditWhipToken: EditText
     private lateinit var mCheckIsSimulcast: CheckBox
     private lateinit var mButtonConnect: Button
+    private lateinit var mStatusTextView: TextView
     private lateinit var mSurfaceViewPreview: SurfaceView
     private lateinit var mViewGroupBottomBar: ViewGroup
+    private lateinit var mViewGroupInputBar: ViewGroup
     private lateinit var mTextRms: TextView
 
     private lateinit var mRenderThread: RenderThread
 
     private var mIsConnectUIVisible = true
 
+    private var mSetAnswerTimeMillis = 0L
     private var mPeerConnection: PeerConnection? = null
 
     private var mIsInitCameraDone = false

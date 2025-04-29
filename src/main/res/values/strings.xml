@@ -5,6 +5,8 @@
     <string name="whip_hint_token">Auth token</string>
     <string name="whip_simulcast">Simulcast (for IVS)</string>
     <string name="whip_connect">Connect</string>
+    <string name="whip_disconnect">Disconnect</string>
+    <string name="status_initial">Enter server and token and click Connect</string>
 
     <string name="error_server_missing">Server name is missing</string>
     <string name="error_server_invalid">Server name is invalid</string>
@@ -32,9 +34,11 @@
     <string name="sdp_offer_error">SDP offer error: %s</string>
     <string name="sdp_offer_received_sdp_answer">Received SDP answer in %d ms</string>
 
-    <string name="pc_connection_state">PeerConnection connect state: %s</string>
+    <string name="pc_connection_state">PeerConnection state: %s</string>
     <string name="pc_state_connecting">Connecting</string>
     <string name="pc_state_connected">Connected</string>
     <string name="pc_state_failed">Failed</string>
     <string name="pc_state_closed">Closed</string>
+
+    <string name="pc_time_to_connect">in %d ms</string>
 </resources>
