@@ -527,9 +527,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         val stateId = when (state) {
             PeerConnection.CONNECTION_STATE_CONNECTING ->
                 R.string.pc_state_connecting
-            PeerConnection.CONNECTION_STATE_CONNECTED -> {
+            PeerConnection.CONNECTION_STATE_CONNECTED ->
                 R.string.pc_state_connected
-            }
             PeerConnection.CONNECTION_STATE_FAILED ->
                 R.string.pc_state_failed
             PeerConnection.CONNECTION_STATE_CLOSED ->
