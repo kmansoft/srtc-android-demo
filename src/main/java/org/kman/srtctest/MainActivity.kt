@@ -176,10 +176,6 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private fun disconnect() {
         releasePeerConnection()
         releaseEncoders()
-
-        if (!isDestroyed) {
-            updateCameraSession()
-        }
     }
 
     private fun releasePeerConnection() {
@@ -669,7 +665,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     }
 
     private fun onCameraError(camera: CameraDevice, error: Int) {
-         Util.toast(this, R.string.error_camera_open, error)
+        Util.toast(this, R.string.error_camera_open, error)
 
         mCamera?.close()
         mCamera = null
