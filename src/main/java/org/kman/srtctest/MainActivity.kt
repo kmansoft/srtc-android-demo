@@ -663,7 +663,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     }
 
     private fun onCameraClosed(camera: CameraDevice) {
-        mCamera = null
+        if (mCamera == camera) {
+            mCamera = null
+        }
     }
 
     private fun onCameraError(camera: CameraDevice, error: Int) {
@@ -966,7 +968,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
                     encoder?.start()
 
-                    val name = "encoder-" + (track.simulcastLayer?.name ?: "default");
+                    val name = "encoder-" + (track.simulcastLayer?.name ?: "default")
                     renderTarget = renderThread.createTarget(inputSurface, name, size.width, size.height)
                 } catch (x: Exception) {
                     MyLog.i(TAG, "Error configuring the encoder: %s", x.message)

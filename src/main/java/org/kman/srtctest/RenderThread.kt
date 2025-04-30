@@ -10,7 +10,6 @@ import android.opengl.Matrix
 import android.os.Handler
 import android.os.Looper
 import android.view.Surface
-import kotlinx.coroutines.runBlocking
 import org.kman.srtctest.util.MyLog
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -253,7 +252,7 @@ class RenderThread(context: Context,
         }
 
         val eglNumConfigs = IntArray(1)
-        egl.eglGetConfigs(eglDisplay, null, 0, eglNumConfigs);
+        egl.eglGetConfigs(eglDisplay, null, 0, eglNumConfigs)
         if (eglNumConfigs[0] == 0) {
             sendError("No configs")
             return
@@ -301,7 +300,7 @@ class RenderThread(context: Context,
         GLES20.glAttachShader(program, fshader)
 
         GLES20.glBindAttribLocation(program, 0, "a_Position")
-        GLES20.glBindAttribLocation(program, 1, "a_TexCoord");
+        GLES20.glBindAttribLocation(program, 1, "a_TexCoord")
 
         GLES20.glLinkProgram(program)
 
