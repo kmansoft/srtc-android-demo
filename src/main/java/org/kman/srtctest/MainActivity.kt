@@ -146,7 +146,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mPreviewTarget?.release()
 
         val frame = holder.surfaceFrame
-        mPreviewTarget = mRenderThread.createTarget(holder.surface, frame.width(), frame.height())
+        mPreviewTarget = mRenderThread.createTarget(holder.surface, "preview", frame.width(), frame.height())
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
@@ -188,9 +188,6 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     }
 
     private fun releaseEncoders() {
-        mVideoEncoderSingle?.release()
-        mVideoEncoderSingle = null
-
         mAudioRecord?.stop()
         mAudioRecord?.release()
         mAudioRecord = null
@@ -199,6 +196,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mAudioThread?.join()
         mAudioThread = null
 
+        mVideoEncoderSingle?.release()
+        mVideoEncoderSingle = null
         for (encoder in mVideoEncoderSimulcastList) {
             encoder.release()
         }
@@ -967,7 +966,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
                     encoder?.start()
 
-                    renderTarget = renderThread.createTarget(inputSurface, size.width, size.height)
+                    val name = "encoder-" + (track.simulcastLayer?.name ?: "default");
+                    renderTarget = renderThread.createTarget(inputSurface, name, size.width, size.height)
                 } catch (x: Exception) {
                     MyLog.i(TAG, "Error configuring the encoder: %s", x.message)
                     Util.toast(activity, R.string.error_starting_encoder)
@@ -994,6 +994,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     e.release()
                 }
             }
+
+            renderTarget?.release()
+            renderTarget = null
         }
 
         private val callback = object : MediaCodec.Callback() {

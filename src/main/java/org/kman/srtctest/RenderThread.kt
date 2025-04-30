@@ -45,6 +45,7 @@ class RenderThread(context: Context,
     class RenderTarget (
         val thread: RenderThread,
         val surface: EGLSurface,
+        val name: String,
         var width: Int,
         var height: Int
     ) {
@@ -114,7 +115,7 @@ class RenderThread(context: Context,
         return res
     }
 
-    fun createTarget(surface: Surface, width: Int, height: Int): RenderTarget? {
+    fun createTarget(surface: Surface, name: String, width: Int, height: Int): RenderTarget? {
         var res: RenderTarget? = null
 
         if (!blocking {
@@ -126,7 +127,7 @@ class RenderThread(context: Context,
                     if (glSurface == null || glSurface == EGL10.EGL_NO_SURFACE) {
                         sendError("Cannot create a window surface")
                     } else {
-                        val target =  RenderTarget(this, glSurface, width, height)
+                        val target =  RenderTarget(this, glSurface, name, width, height)
                         mRenderTargetList.add(target)
 
                         res = target
