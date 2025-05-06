@@ -129,7 +129,6 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
 
     const srtc::OfferConfig offerConfig{
         .cname = gClassOfferConfig.getFieldString(env, config, "cname"),
-        .enableRTX = true
     };
 
     // Video
