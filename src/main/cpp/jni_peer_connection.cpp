@@ -30,58 +30,6 @@ srtc::android::ClassMap gClassVideoConfig;
 srtc::android::ClassMap gClassAudioCodec;
 srtc::android::ClassMap gClassAudioConfig;
 
-class HighestProfileSelector : public srtc::SdpAnswer::TrackSelector {
-public:
-    ~HighestProfileSelector() override = default;
-
-    [[nodiscard]] std::shared_ptr<srtc::Track> selectTrack(srtc::MediaType type,
-                                                           const std::vector<std::shared_ptr<srtc::Track>>& list) const override;
-
-};
-
-bool isBetter(const std::shared_ptr<srtc::Track>& best,
-              const std::shared_ptr<srtc::Track>& curr)
-{
-    if (!best) {
-        return true;
-    }
-
-    if (best->getCodec() != curr->getCodec()) {
-        return best->getCodec() < curr->getCodec();
-    }
-
-    const auto best_options = best->getCodecOptions();
-    const auto curr_options = curr->getCodecOptions();
-
-    const auto best_profileId = best_options ? best_options->profileLevelId : 0;
-    const auto curr_profileId = curr_options? curr_options->profileLevelId : 0;
-
-    return best_profileId < curr_profileId;
-}
-
-std::shared_ptr<srtc::Track> HighestProfileSelector::selectTrack(srtc::MediaType type,
-                                                                 const std::vector<std::shared_ptr<srtc::Track>>& list) const
-{
-    if (list.empty()) {
-        return nullptr;
-    }
-
-    if (type == srtc::MediaType::Audio) {
-        return list[0];
-    } else if (type == srtc::MediaType::Video) {
-        std::shared_ptr<srtc::Track> best;
-        for (const auto& curr : list) {
-            if (isBetter(best, curr)) {
-                best = curr;
-            }
-        }
-        return best;
-    } else {
-        return nullptr;
-    }
-}
-
-
 jobject newCodecOptions(JNIEnv* env, const std::shared_ptr<srtc::Track::CodecOptions>& codecOptions) {
     if (!codecOptions) {
         return nullptr;
@@ -143,7 +91,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
             videoCodecList.push_back(
                 srtc::PubVideoCodec {
                     .codec = static_cast<srtc::Codec>(gClassVideoCodec.getFieldInt(env, itemJni, "codec")),
-                    .profileLevelId = static_cast<uint32_t>(gClassVideoCodec.getFieldInt(env, itemJni,
+                    .profile_level_id = static_cast<uint32_t>(gClassVideoCodec.getFieldInt(env, itemJni,
                                                                                          "profileLevelId"))
             });
         }
@@ -157,15 +105,15 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
                     .name = gClassSimulcastLayer.getFieldString(env, itemJni, "name"),
                     .width = static_cast<uint16_t>(gClassSimulcastLayer.getFieldInt(env, itemJni, "width")),
                     .height = static_cast<uint16_t>(gClassSimulcastLayer.getFieldInt(env, itemJni, "height")),
-                    .framesPerSecond = static_cast<uint16_t>(gClassSimulcastLayer.getFieldInt(env, itemJni, "framesPerSecond")),
-                    .kilobitPerSecond = static_cast<uint32_t>(gClassSimulcastLayer.getFieldInt(env, itemJni, "kilobitPerSecond"))
+                    .frames_per_second = static_cast<uint16_t>(gClassSimulcastLayer.getFieldInt(env, itemJni, "framesPerSecond")),
+                    .kilobits_per_second = static_cast<uint32_t>(gClassSimulcastLayer.getFieldInt(env, itemJni, "kilobitPerSecond"))
             });
         }
     }
 
     const srtc::PubVideoConfig videoConfig {
-        .codecList = videoCodecList,
-        .simulcastLayerList = videoSimulcastLayerList
+        .codec_list = videoCodecList,
+        .simulcast_layer_list = videoSimulcastLayerList
     };
 
     // Audio
@@ -184,12 +132,12 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
         }
     }
 
-    const srtc::PubAudioConfig audioConfig { .codecList = audioCodecList };
+    const srtc::PubAudioConfig audioConfig { .codec_list = audioCodecList };
 
     // Create the offer
     std::string outSdpOffer;
 
-    const auto offer = std::make_shared<srtc::SdpOffer>(offerConfig,
+    const auto offer = ptr->mConn->createPublishSdpOffer(offerConfig,
                                                         video ? srtc::optional(videoConfig) : srtc::nullopt,
                                                         audio ? srtc::optional(audioConfig) : srtc::nullopt);
     const auto [ offerStr, offerError ] = offer->generate();
@@ -221,9 +169,9 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
 
     const auto offer = ptr->mConn->getSdpOffer();
     const auto answerStr = srtc::android::fromJavaString(env, answerJ);
-    const auto selector = std::make_shared<HighestProfileSelector>();
+    const auto selector = std::make_shared<srtc::HighestTrackSelector>();
 
-    const auto [ answer, answerError ] = srtc::SdpAnswer::parse(offer, answerStr, selector);
+    const auto [ answer, answerError ] = ptr->mConn->parsePublishSdpAnswer(offer, answerStr, selector);
     if (answerError.isError()) {
         srtc::android::JavaError::throwSRtcException(env, answerError);
         return;
@@ -260,8 +208,8 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
                                                            nameJ,
                                                            static_cast<jint>(layer->width),
                                                            static_cast<jint>(layer->height),
-                                                           static_cast<jint>(layer->framesPerSecond),
-                                                           static_cast<jint>(layer->kilobitPerSecond));
+                                                           static_cast<jint>(layer->frames_per_second),
+                                                           static_cast<jint>(layer->kilobits_per_second));
             jobject videoTrackJ = gClassTrack.newObject(env,
                                                         static_cast<jint>(track->getTrackId()),
                                                         static_cast<jint>(track->getPayloadId()),
