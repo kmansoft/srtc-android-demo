@@ -324,6 +324,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 setConnectionStateListener { state ->
                     onPeerConnectionConnectState(state)
                 }
+                setPublishConnectionStatsListener { stats ->
+                    onPeerConnectionPublishStats(stats)
+                }
             }
 
             // Create the SDP offer
@@ -487,7 +490,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             }
 
             if (mVideoEncoderSingle == null) {
-                mVideoEncoderSingle = EncoderWrapper(this, videoSingleTrack, size,
+                mVideoEncoderSingle = EncoderWrapper(this, videoSingleTrack, size, BITRATE_HIGH,
                     mRenderThread, mEncoderHandler)
                 mVideoEncoderSingle?.start()
             }
@@ -495,7 +498,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             for (track in videoSimulcastTrackList) {
                 val layer = requireNotNull(track.simulcastLayer)
                 val size = Size(layer.width, layer.height)
-                val encoder = EncoderWrapper(this, track, size,
+                val encoder = EncoderWrapper(this, track, size, layer.kilobitPerSecond,
                     mRenderThread, mEncoderHandler)
                 if (encoder.start()) {
                     mVideoEncoderSimulcastList.add(encoder)
@@ -540,6 +543,16 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
         mStatusTextView.text = message
     }
+
+    private fun onPeerConnectionPublishStats(stats: PeerConnection.PublishConnectionStats) {
+        val message = getString(
+            R.string.pc_connection_stats,
+            stats.bandwidth_kbit_per_second,
+            stats.rtt_ms
+        )
+        mStatusTextView.text = message
+    }
+
 
     private fun initCameraCapture() {
         if (!mIsInitCameraDone) {
@@ -903,6 +916,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         val activity: MainActivity,
         val track: Track,
         val size: Size,
+        val bitrate: Int,
         val renderThread: RenderThread,
         val handler: Handler,
         ) {
@@ -929,7 +943,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 MyLog.i(TAG, "Encoder for %s: %s", mime, codecInfo.name)
 
                 val format = MediaFormat.createVideoFormat(mime, size.width, size.height).apply {
-                    setInteger(MediaFormat.KEY_BIT_RATE, BITRATE_HIGH * 1000)
+                    setInteger(MediaFormat.KEY_BIT_RATE, bitrate)
                     setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
                     setInteger(MediaFormat.KEY_FRAME_RATE, ENCODE_FRAMES_PER_SECOND)
                     setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
@@ -1106,8 +1120,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
         private const val ENCODE_FRAMES_PER_SECOND = 15
 
-        private const val BITRATE_LOW = 500
-        private const val BITRATE_MID = 1500
-        private const val BITRATE_HIGH = 2500
+        private const val BITRATE_LOW = 300
+        private const val BITRATE_MID = 1000
+        private const val BITRATE_HIGH = 1500
     }
 }

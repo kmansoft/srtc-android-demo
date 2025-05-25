@@ -6,7 +6,7 @@ plugins {
 android {
     namespace = "org.kman.srtctest"
     compileSdk = 35
-    ndkVersion = "27.2.12479018"
+    ndkVersion = "28.1.13356709"
 
     defaultConfig {
         applicationId = "org.kman.srtctest"

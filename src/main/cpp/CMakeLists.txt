@@ -29,7 +29,7 @@ target_link_libraries(srtctest
 # BoringSSL
 # Has to be available during configure because dependencies do find_package(OPENSSL)
 
-set(FETCHCONTENT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/${CMAKE_ANDROID_ARCH}-${CMAKE_BUILD_TYPE}")
+set(FETCHCONTENT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/build-${CMAKE_ANDROID_ARCH}-${CMAKE_BUILD_TYPE}")
 
 FetchContent_Declare(boringssl
         GIT_REPOSITORY "https://boringssl.googlesource.com/boringssl"

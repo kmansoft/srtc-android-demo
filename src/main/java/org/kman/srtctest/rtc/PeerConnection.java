@@ -185,6 +185,38 @@ public class PeerConnection {
         }
     }
 
+    // Connection stats
+
+    public static class PublishConnectionStats {
+        PublishConnectionStats(int packet_count, int byte_count, float packets_lost_percent,
+                               float rtt_ms, float bandwidth_kbit_per_second) {
+            this.packet_count = packet_count;
+            this.byte_count = byte_count;
+            this.packets_lost_percent = packets_lost_percent;
+            this.rtt_ms = rtt_ms;
+            this.bandwidth_kbit_per_second = bandwidth_kbit_per_second;
+        }
+
+
+        public final int packet_count;
+        public final int byte_count;
+        public final float packets_lost_percent;
+        public final float rtt_ms;
+        public final float bandwidth_kbit_per_second;
+    }
+
+    public interface PublishConnectionStatsListener {
+        void onPublishConnectionStats(@NonNull PublishConnectionStats stats);
+    }
+
+    public void setPublishConnectionStatsListener(PublishConnectionStatsListener listener) {
+        synchronized (mListenerLock) {
+            mPublishConnectionStatsListener = listener;
+        }
+    }
+
+    // Implementation
+
     static {
         System.loadLibrary("srtctest");
     }
@@ -233,6 +265,17 @@ public class PeerConnection {
         });
     }
 
+    void fromNativeOnPublishConnectionStats(PublishConnectionStats stats) {
+        mMainHandler.post(() -> {
+            synchronized (mListenerLock) {
+                if (mPublishConnectionStatsListener != null) {
+                    mPublishConnectionStatsListener.onPublishConnectionStats(stats);
+                }
+            }
+        });
+
+    }
+
     private final Handler mMainHandler = new Handler(Looper.getMainLooper());
     private final Object mHandleLock = new Object();
 
@@ -243,4 +286,5 @@ public class PeerConnection {
 
     private final Object mListenerLock = new Object();
     private ConnectionStateListener mConnectionStateListener;
+    private PublishConnectionStatsListener mPublishConnectionStatsListener;
 }

@@ -29,6 +29,7 @@ srtc::android::ClassMap gClassVideoCodec;
 srtc::android::ClassMap gClassVideoConfig;
 srtc::android::ClassMap gClassAudioCodec;
 srtc::android::ClassMap gClassAudioConfig;
+srtc::android::ClassMap gClassPublishConnectionStats;
 
 jobject newCodecOptions(JNIEnv* env, const std::shared_ptr<srtc::Track::CodecOptions>& codecOptions) {
     if (!codecOptions) {
@@ -77,6 +78,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
 
     const srtc::OfferConfig offerConfig{
         .cname = gClassOfferConfig.getFieldString(env, config, "cname"),
+        .enable_bwe = true
     };
 
     // Video
@@ -138,8 +140,8 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
     std::string outSdpOffer;
 
     const auto offer = ptr->mConn->createPublishSdpOffer(offerConfig,
-                                                        video ? srtc::optional(videoConfig) : srtc::nullopt,
-                                                        audio ? srtc::optional(audioConfig) : srtc::nullopt);
+                                                        video ? std::optional(videoConfig) : std::nullopt,
+                                                        audio ? std::optional(audioConfig) : std::nullopt);
     const auto [ offerStr, offerError ] = offer->generate();
 
     if (offerError.isError()) {
@@ -431,7 +433,8 @@ void JavaPeerConnection::initializeJNI(JNIEnv *env)
             .findField(env, "mVideoSingleTrack", "L" SRTC_PACKAGE_NAME "/Track;")
             .findField(env, "mVideoSimulcastTrackList", "Ljava/util/List;")
             .findField(env, "mAudioTrack", "L" SRTC_PACKAGE_NAME "/Track;")
-            .findMethod(env, "fromNativeOnConnectionState", "(I)V");
+            .findMethod(env, "fromNativeOnConnectionState", "(I)V")
+            .findMethod(env, "fromNativeOnPublishConnectionStats", "(L" SRTC_PACKAGE_NAME "/PeerConnection$PublishConnectionStats;)V");
 
     // OfferConfig
 
@@ -461,6 +464,11 @@ void JavaPeerConnection::initializeJNI(JNIEnv *env)
 
     gClassAudioConfig.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$PubAudioConfig")
             .findField(env, "codecList", "Ljava/util/ArrayList;");
+
+    // PubConnectionStats
+
+    gClassPublishConnectionStats.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$PublishConnectionStats")
+        .findMethod(env, "<init>", "(IIFFF)V");
 }
 
 JavaPeerConnection::JavaPeerConnection(jobject thiz)
@@ -471,6 +479,16 @@ JavaPeerConnection::JavaPeerConnection(jobject thiz)
     mConn->setConnectionStateListener([this](PeerConnection::ConnectionState state){
         const auto env = getJNIEnv();
         gClassPeerConnection.callVoidMethod(env, mThiz, "fromNativeOnConnectionState", static_cast<jint>(state));
+    });
+    mConn->setPublishConnectionStatsListener([this](const PublishConnectionStats& stats) {
+        const auto env = getJNIEnv();
+        const auto statsJ = gClassPublishConnectionStats.newObject(env,
+                                           static_cast<jint>(stats.packet_count),
+                                           static_cast<jint>(stats.byte_count),
+                                           static_cast<jfloat>(stats.packets_lost_percent),
+                                           static_cast<jfloat>(stats.rtt_ms),
+                                           static_cast<jfloat>(stats.bandwidth_kbit_per_second));
+        gClassPeerConnection.callVoidMethod(env, mThiz, "fromNativeOnPublishConnectionStats", statsJ);
     });
 }
 
