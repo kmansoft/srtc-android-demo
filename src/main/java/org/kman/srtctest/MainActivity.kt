@@ -943,7 +943,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 MyLog.i(TAG, "Encoder for %s: %s", mime, codecInfo.name)
 
                 val format = MediaFormat.createVideoFormat(mime, size.width, size.height).apply {
-                    setInteger(MediaFormat.KEY_BIT_RATE, bitrate)
+                    setInteger(MediaFormat.KEY_BIT_RATE, bitrate * 1024)
                     setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
                     setInteger(MediaFormat.KEY_FRAME_RATE, ENCODE_FRAMES_PER_SECOND)
                     setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
