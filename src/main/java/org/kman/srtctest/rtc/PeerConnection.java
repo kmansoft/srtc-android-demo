@@ -189,12 +189,13 @@ public class PeerConnection {
 
     public static class PublishConnectionStats {
         PublishConnectionStats(int packet_count, int byte_count, float packets_lost_percent,
-                               float rtt_ms, float bandwidth_kbit_per_second) {
+                               float rtt_ms, float bandwidth_actual_kbit_per_second, float bandwidth_suggested_kbit_per_second) {
             this.packet_count = packet_count;
             this.byte_count = byte_count;
             this.packets_lost_percent = packets_lost_percent;
             this.rtt_ms = rtt_ms;
-            this.bandwidth_kbit_per_second = bandwidth_kbit_per_second;
+            this.bandwidth_actual_kbit_per_second = bandwidth_actual_kbit_per_second;
+            this.bandwidth_suggested_kbit_per_second = bandwidth_suggested_kbit_per_second;
         }
 
 
@@ -202,7 +203,8 @@ public class PeerConnection {
         public final int byte_count;
         public final float packets_lost_percent;
         public final float rtt_ms;
-        public final float bandwidth_kbit_per_second;
+        public final float bandwidth_actual_kbit_per_second;
+        public final float bandwidth_suggested_kbit_per_second;
     }
 
     public interface PublishConnectionStatsListener {
@@ -257,11 +259,11 @@ public class PeerConnection {
 
     void fromNativeOnConnectionState(int state) {
         mMainHandler.post(() -> {
-           synchronized (mListenerLock) {
-               if (mConnectionStateListener != null) {
-                   mConnectionStateListener.onConnectionState(state);
-               }
-           }
+            synchronized (mListenerLock) {
+                if (mConnectionStateListener != null) {
+                    mConnectionStateListener.onConnectionState(state);
+                }
+            }
         });
     }
 

@@ -547,7 +547,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private fun onPeerConnectionPublishStats(stats: PeerConnection.PublishConnectionStats) {
         val message = getString(
             R.string.pc_connection_stats,
-            stats.bandwidth_kbit_per_second,
+            stats.bandwidth_actual_kbit_per_second,
             stats.rtt_ms
         )
         mStatusTextView.text = message

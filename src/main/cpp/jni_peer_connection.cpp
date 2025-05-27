@@ -468,7 +468,11 @@ void JavaPeerConnection::initializeJNI(JNIEnv *env)
     // PubConnectionStats
 
     gClassPublishConnectionStats.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$PublishConnectionStats")
-        .findMethod(env, "<init>", "(IIFFF)V");
+        .findMethod(env, "<init>", "(IIFFFF)V");
+
+    // Logging
+
+    srtc::setLogLevel(SRTC_LOG_E);
 }
 
 JavaPeerConnection::JavaPeerConnection(jobject thiz)
@@ -487,7 +491,8 @@ JavaPeerConnection::JavaPeerConnection(jobject thiz)
                                            static_cast<jint>(stats.byte_count),
                                            static_cast<jfloat>(stats.packets_lost_percent),
                                            static_cast<jfloat>(stats.rtt_ms),
-                                           static_cast<jfloat>(stats.bandwidth_kbit_per_second));
+                                           static_cast<jfloat>(stats.bandwidth_actual_kbit_per_second),
+                                           static_cast<jfloat>(stats.bandwidth_suggested_kbit_per_second));
         gClassPeerConnection.callVoidMethod(env, mThiz, "fromNativeOnPublishConnectionStats", statsJ);
     });
 }
