@@ -490,7 +490,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             }
 
             if (mVideoEncoderSingle == null) {
-                mVideoEncoderSingle = EncoderWrapper(this, videoSingleTrack, size, BITRATE_HIGH,
+                mVideoEncoderSingle = EncoderWrapper(this, videoSingleTrack, size,
+                    BITRATE_HIGH,
+                    ENCODE_FRAMES_PER_SECOND,
                     mRenderThread, mEncoderHandler)
                 mVideoEncoderSingle?.start()
             }
@@ -498,7 +500,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             for (track in videoSimulcastTrackList) {
                 val layer = requireNotNull(track.simulcastLayer)
                 val size = Size(layer.width, layer.height)
-                val encoder = EncoderWrapper(this, track, size, layer.kilobitPerSecond,
+                val encoder = EncoderWrapper(this, track, size,
+                    layer.kilobitPerSecond,
+                    layer.framesPerSecond,
                     mRenderThread, mEncoderHandler)
                 if (encoder.start()) {
                     mVideoEncoderSimulcastList.add(encoder)
@@ -917,6 +921,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         val track: Track,
         val size: Size,
         val bitrate: Int,
+        val framerate: Int,
         val renderThread: RenderThread,
         val handler: Handler,
         ) {
@@ -945,7 +950,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 val format = MediaFormat.createVideoFormat(mime, size.width, size.height).apply {
                     setInteger(MediaFormat.KEY_BIT_RATE, bitrate * 1024)
                     setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
-                    setInteger(MediaFormat.KEY_FRAME_RATE, ENCODE_FRAMES_PER_SECOND)
+                    setInteger(MediaFormat.KEY_FRAME_RATE, framerate)
                     setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
 
                     if (codec == PeerConnection.VIDEO_CODEC_H264) {
