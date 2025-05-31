@@ -41,5 +41,5 @@
     <string name="pc_state_closed">Closed</string>
 
     <string name="pc_time_to_connect">in %d ms</string>
-    <string name="pc_connection_stats">Stats: bw %.2f kb/s, rtt %.2f ms</string>
+    <string name="pc_connection_stats">Stats: bw %1$.2f kb/s, rtt %2$.2f ms</string>
 </resources>
