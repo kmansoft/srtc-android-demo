@@ -552,6 +552,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         val message = getString(
             R.string.pc_connection_stats,
             stats.bandwidth_actual_kbit_per_second,
+            stats.bandwidth_suggested_kbit_per_second,
             stats.rtt_ms
         )
         mStatusTextView.text = message
