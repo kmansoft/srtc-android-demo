@@ -76,10 +76,9 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
         return nullptr;
     }
 
-    const srtc::OfferConfig offerConfig{
-        .cname = gClassOfferConfig.getFieldString(env, config, "cname"),
-        .enable_bwe = true
-    };
+     srtc::PubOfferConfig offerConfig = {};
+     offerConfig.cname = gClassOfferConfig.getFieldString(env, config, "cname");
+     offerConfig.enable_bwe = true;
 
     // Video
     std::vector<srtc::PubVideoCodec> videoCodecList;
@@ -139,18 +138,23 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
     // Create the offer
     std::string outSdpOffer;
 
-    const auto offer = ptr->mConn->createPublishSdpOffer(offerConfig,
+    const auto [ offer, offerError ] = ptr->mConn->createPublishOffer(offerConfig,
                                                         video ? std::optional(videoConfig) : std::nullopt,
                                                         audio ? std::optional(audioConfig) : std::nullopt);
-    const auto [ offerStr, offerError ] = offer->generate();
-
     if (offerError.isError()) {
+      // Throw an exception
+      srtc::android::JavaError::throwSRtcException(env, offerError);
+      return nullptr;
+    }
+
+    const auto [ offerStr, offerStrError ] = offer->generate();
+    if (offerStrError.isError()) {
         // Throw an exception
-        srtc::android::JavaError::throwSRtcException(env, offerError);
+        srtc::android::JavaError::throwSRtcException(env, offerStrError);
         return nullptr;
     }
 
-    if (const auto setOfferError = ptr->mConn->setSdpOffer(offer); setOfferError.isError()) {
+    if (const auto setOfferError = ptr->mConn->setOffer(offer); setOfferError.isError()) {
         // Throw an exception
         srtc::android::JavaError::throwSRtcException(env, setOfferError);
         return nullptr;
@@ -169,17 +173,17 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
         return;
     }
 
-    const auto offer = ptr->mConn->getSdpOffer();
+    const auto offer = ptr->mConn->getOffer();
     const auto answerStr = srtc::android::fromJavaString(env, answerJ);
     const auto selector = std::make_shared<srtc::HighestTrackSelector>();
 
-    const auto [ answer, answerError ] = ptr->mConn->parsePublishSdpAnswer(offer, answerStr, selector);
+    const auto [ answer, answerError ] = ptr->mConn->parsePublishAnswer(offer, answerStr, selector);
     if (answerError.isError()) {
         srtc::android::JavaError::throwSRtcException(env, answerError);
         return;
     }
 
-    if (const auto setAnswerError = ptr->mConn->setSdpAnswer(answer); setAnswerError.isError()) {
+    if (const auto setAnswerError = ptr->mConn->setAnswer(answer); setAnswerError.isError()) {
         srtc::android::JavaError::throwSRtcException(env, setAnswerError);
         return;
     }
@@ -477,7 +481,7 @@ void JavaPeerConnection::initializeJNI(JNIEnv *env)
 
 JavaPeerConnection::JavaPeerConnection(jobject thiz)
     : mThiz(thiz)
-    , mConn(std::make_unique<PeerConnection>())
+    , mConn(std::make_unique<PeerConnection>(Direction::Publish))
     , mOpusEncoder(nullptr)
 {
     mConn->setConnectionStateListener([this](PeerConnection::ConnectionState state){
