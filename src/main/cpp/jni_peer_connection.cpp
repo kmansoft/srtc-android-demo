@@ -31,7 +31,8 @@ srtc::android::ClassMap gClassAudioCodec;
 srtc::android::ClassMap gClassAudioConfig;
 srtc::android::ClassMap gClassPublishConnectionStats;
 
-jobject newCodecOptions(JNIEnv* env, const std::shared_ptr<srtc::Track::CodecOptions>& codecOptions) {
+jobject newCodecOptions(JNIEnv *env, const std::shared_ptr<srtc::Track::CodecOptions> &codecOptions)
+{
     if (!codecOptions) {
         return nullptr;
     }
@@ -46,7 +47,7 @@ jobject newCodecOptions(JNIEnv* env, const std::shared_ptr<srtc::Track::CodecOpt
 
 extern "C"
 JNIEXPORT jlong JNICALL
-Java_org_kman_srtctest_rtc_PeerConnection_createImpl(JNIEnv* env, jobject thiz)
+Java_org_kman_srtctest_rtc_PeerConnection_createImpl(JNIEnv *env, jobject thiz)
 {
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "MemoryLeak"
@@ -57,9 +58,9 @@ Java_org_kman_srtctest_rtc_PeerConnection_createImpl(JNIEnv* env, jobject thiz)
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_org_kman_srtctest_rtc_PeerConnection_releaseImpl(JNIEnv* env, jobject thiz, jlong handle)
+Java_org_kman_srtctest_rtc_PeerConnection_releaseImpl(JNIEnv *env, jobject thiz, jlong handle)
 {
-    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
+    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection *>(handle);
     delete ptr;
 }
 
@@ -69,16 +70,18 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
                                                                jlong handle, jobject config,
                                                                jobject video, jobject audio)
 {
-    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
+    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection *>(handle);
     if (!ptr) {
-        const srtc::Error error = { srtc::Error::Code::InvalidData, "The connection has been released" };
+        const srtc::Error error = {srtc::Error::Code::InvalidData,
+                                   "The connection has been released"};
         srtc::android::JavaError::throwSRtcException(env, error);
         return nullptr;
     }
 
-     srtc::PubOfferConfig offerConfig = {};
-     offerConfig.cname = gClassOfferConfig.getFieldString(env, config, "cname");
-     offerConfig.enable_bwe = true;
+    const srtc::PubOfferConfig offerConfig = {
+            .cname = gClassOfferConfig.getFieldString(env, config, "cname"),
+            .enable_bwe = true
+    };
 
     // Video
     std::vector<srtc::PubVideoCodec> videoCodecList;
@@ -88,33 +91,45 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
         const auto codecListJni = gClassVideoConfig.getFieldObject(env, video, "codecList");
         for (jsize i = 0;
              i < gClassJavaUtilArrayList.callIntMethod(env, codecListJni, "size"); i += 1) {
-            const auto itemJni = gClassJavaUtilArrayList.callObjectMethod(env, codecListJni, "get", i);
+            const auto itemJni = gClassJavaUtilArrayList.callObjectMethod(env, codecListJni, "get",
+                                                                          i);
             videoCodecList.push_back(
-                srtc::PubVideoCodec {
-                    .codec = static_cast<srtc::Codec>(gClassVideoCodec.getFieldInt(env, itemJni, "codec")),
-                    .profile_level_id = static_cast<uint32_t>(gClassVideoCodec.getFieldInt(env, itemJni,
-                                                                                         "profileLevelId"))
-            });
+                    srtc::PubVideoCodec{
+                            .codec = static_cast<srtc::Codec>(gClassVideoCodec.getFieldInt(env,
+                                                                                           itemJni,
+                                                                                           "codec")),
+                            .profile_level_id = static_cast<uint32_t>(gClassVideoCodec.getFieldInt(
+                                    env, itemJni,
+                                    "profileLevelId"))
+                    });
         }
 
-        const auto simulcastListJni = gClassVideoConfig.getFieldObject(env, video, "simulcastLayerList");
+        const auto simulcastListJni = gClassVideoConfig.getFieldObject(env, video,
+                                                                       "simulcastLayerList");
         for (jsize i = 0;
              i < gClassJavaUtilArrayList.callIntMethod(env, simulcastListJni, "size"); i += 1) {
-            const auto itemJni = gClassJavaUtilArrayList.callObjectMethod(env, simulcastListJni, "get", i);
+            const auto itemJni = gClassJavaUtilArrayList.callObjectMethod(env, simulcastListJni,
+                                                                          "get", i);
             videoSimulcastLayerList.push_back(
-                srtc::SimulcastLayer {
-                    .name = gClassSimulcastLayer.getFieldString(env, itemJni, "name"),
-                    .width = static_cast<uint16_t>(gClassSimulcastLayer.getFieldInt(env, itemJni, "width")),
-                    .height = static_cast<uint16_t>(gClassSimulcastLayer.getFieldInt(env, itemJni, "height")),
-                    .frames_per_second = static_cast<uint16_t>(gClassSimulcastLayer.getFieldInt(env, itemJni, "framesPerSecond")),
-                    .kilobits_per_second = static_cast<uint32_t>(gClassSimulcastLayer.getFieldInt(env, itemJni, "kilobitPerSecond"))
-            });
+                    srtc::SimulcastLayer{
+                            .name = gClassSimulcastLayer.getFieldString(env, itemJni, "name"),
+                            .width = static_cast<uint16_t>(gClassSimulcastLayer.getFieldInt(env,
+                                                                                            itemJni,
+                                                                                            "width")),
+                            .height = static_cast<uint16_t>(gClassSimulcastLayer.getFieldInt(env,
+                                                                                             itemJni,
+                                                                                             "height")),
+                            .frames_per_second = static_cast<uint16_t>(gClassSimulcastLayer.getFieldInt(
+                                    env, itemJni, "framesPerSecond")),
+                            .kilobits_per_second = static_cast<uint32_t>(gClassSimulcastLayer.getFieldInt(
+                                    env, itemJni, "kilobitPerSecond"))
+                    });
         }
     }
 
-    const srtc::PubVideoConfig videoConfig {
-        .codec_list = videoCodecList,
-        .simulcast_layer_list = videoSimulcastLayerList
+    const srtc::PubVideoConfig videoConfig{
+            .codec_list = videoCodecList,
+            .simulcast_layer_list = videoSimulcastLayerList
     };
 
     // Audio
@@ -123,31 +138,39 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
     if (audio) {
         const auto itemListJni = gClassAudioConfig.getFieldObject(env, audio, "codecList");
         for (jsize i = 0;
-            i < gClassJavaUtilArrayList.callIntMethod(env, itemListJni, "size"); i += 1) {
-            const auto itemJni = gClassJavaUtilArrayList.callObjectMethod(env, itemListJni, "get", i);
+             i < gClassJavaUtilArrayList.callIntMethod(env, itemListJni, "size"); i += 1) {
+            const auto itemJni = gClassJavaUtilArrayList.callObjectMethod(env, itemListJni, "get",
+                                                                          i);
             audioCodecList.push_back(srtc::PubAudioCodec{
-                    .codec = static_cast<srtc::Codec>(gClassAudioCodec.getFieldInt(env, itemJni, "codec")),
-                    .minptime = static_cast<uint32_t>(gClassAudioCodec.getFieldInt(env, itemJni, "minptime")),
-                    .stereo = static_cast<bool>(gClassAudioCodec.getFieldBoolean(env, itemJni, "stereo")),
+                    .codec = static_cast<srtc::Codec>(gClassAudioCodec.getFieldInt(env, itemJni,
+                                                                                   "codec")),
+                    .minptime = static_cast<uint32_t>(gClassAudioCodec.getFieldInt(env, itemJni,
+                                                                                   "minptime")),
+                    .stereo = static_cast<bool>(gClassAudioCodec.getFieldBoolean(env, itemJni,
+                                                                                 "stereo")),
             });
         }
     }
 
-    const srtc::PubAudioConfig audioConfig { .codec_list = audioCodecList };
+    const srtc::PubAudioConfig audioConfig{.codec_list = audioCodecList};
 
     // Create the offer
     std::string outSdpOffer;
 
-    const auto [ offer, offerError ] = ptr->mConn->createPublishOffer(offerConfig,
-                                                        video ? std::optional(videoConfig) : std::nullopt,
-                                                        audio ? std::optional(audioConfig) : std::nullopt);
+    const auto [offer, offerError] = ptr->mConn->createPublishOffer(offerConfig,
+                                                                    video ? std::optional(
+                                                                            videoConfig)
+                                                                          : std::nullopt,
+                                                                    audio ? std::optional(
+                                                                            audioConfig)
+                                                                          : std::nullopt);
     if (offerError.isError()) {
-      // Throw an exception
-      srtc::android::JavaError::throwSRtcException(env, offerError);
-      return nullptr;
+        // Throw an exception
+        srtc::android::JavaError::throwSRtcException(env, offerError);
+        return nullptr;
     }
 
-    const auto [ offerStr, offerStrError ] = offer->generate();
+    const auto [offerStr, offerStrError] = offer->generate();
     if (offerStrError.isError()) {
         // Throw an exception
         srtc::android::JavaError::throwSRtcException(env, offerStrError);
@@ -165,10 +188,11 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobject thiz, jlong handle,
+Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobject thiz,
+                                                               jlong handle,
                                                                jstring answerJ)
 {
-    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
+    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection *>(handle);
     if (!ptr) {
         return;
     }
@@ -177,7 +201,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
     const auto answerStr = srtc::android::fromJavaString(env, answerJ);
     const auto selector = std::make_shared<srtc::HighestTrackSelector>();
 
-    const auto [ answer, answerError ] = ptr->mConn->parsePublishAnswer(offer, answerStr, selector);
+    const auto [answer, answerError] = ptr->mConn->parsePublishAnswer(offer, answerStr, selector);
     if (answerError.isError()) {
         srtc::android::JavaError::throwSRtcException(env, answerError);
         return;
@@ -195,27 +219,27 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
     if (videoSingleTrack) {
         jobject codecOptionsJ = newCodecOptions(env, videoSingleTrack->getCodecOptions());
         jobject videoTrackJ = gClassTrack.newObject(env,
-                                            static_cast<jint>(videoSingleTrack->getTrackId()),
-                                            static_cast<jint>(videoSingleTrack->getPayloadId()),
-                                            static_cast<jint>(videoSingleTrack->getCodec()),
-                                            codecOptionsJ,
-                                            nullptr);
+                                                    static_cast<jint>(videoSingleTrack->getTrackId()),
+                                                    static_cast<jint>(videoSingleTrack->getPayloadId()),
+                                                    static_cast<jint>(videoSingleTrack->getCodec()),
+                                                    codecOptionsJ,
+                                                    nullptr);
         gClassPeerConnection.setFieldObject(env, thiz, "mVideoSingleTrack", videoTrackJ);
     } else if (!videoSimulcastTrackList.empty()) {
         jobject listJ = gClassJavaUtilArrayList.newObject(env);
 
-        for (const auto& track : videoSimulcastTrackList) {
+        for (const auto &track: videoSimulcastTrackList) {
             jobject codecOptionsJ = newCodecOptions(env, track->getCodecOptions());
 
-            const auto& layer = track->getSimulcastLayer();
+            const auto &layer = track->getSimulcastLayer();
 
             jstring nameJ = env->NewStringUTF(layer->name.c_str());
             jobject layerJ = gClassSimulcastLayer.newObject(env,
-                                                           nameJ,
-                                                           static_cast<jint>(layer->width),
-                                                           static_cast<jint>(layer->height),
-                                                           static_cast<jint>(layer->frames_per_second),
-                                                           static_cast<jint>(layer->kilobits_per_second));
+                                                            nameJ,
+                                                            static_cast<jint>(layer->width),
+                                                            static_cast<jint>(layer->height),
+                                                            static_cast<jint>(layer->frames_per_second),
+                                                            static_cast<jint>(layer->kilobits_per_second));
             jobject videoTrackJ = gClassTrack.newObject(env,
                                                         static_cast<jint>(track->getTrackId()),
                                                         static_cast<jint>(track->getPayloadId()),
@@ -244,8 +268,10 @@ Java_org_kman_srtctest_rtc_PeerConnection_setPublishAnswerImpl(JNIEnv *env, jobj
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_org_kman_srtctest_rtc_PeerConnection_setVideoSingleCodecSpecificDataImpl(JNIEnv *env, jobject thiz,
-                                                                              jlong handle, jobjectArray array)
+Java_org_kman_srtctest_rtc_PeerConnection_setVideoSingleCodecSpecificDataImpl(JNIEnv *env,
+                                                                              jobject thiz,
+                                                                              jlong handle,
+                                                                              jobjectArray array)
 {
     const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection *>(handle);
     if (!ptr) {
@@ -262,10 +288,11 @@ Java_org_kman_srtctest_rtc_PeerConnection_setVideoSingleCodecSpecificDataImpl(JN
 
         gClassJavaIoByteBuffer.callObjectMethod(env, item, "get", itemArray, 0, itemSize);
 
-        jboolean isCopy = { false };
+        jboolean isCopy = {false};
         const auto itemArrayPtr = env->GetByteArrayElements(itemArray, &isCopy);
 
-        list.emplace_back(reinterpret_cast<const uint8_t*>(itemArrayPtr), static_cast<size_t>(itemSize));
+        list.emplace_back(reinterpret_cast<const uint8_t *>(itemArrayPtr),
+                          static_cast<size_t>(itemSize));
 
         env->ReleaseByteArrayElements(itemArray, itemArrayPtr, JNI_ABORT);
         env->DeleteLocalRef(itemArray);
@@ -284,7 +311,7 @@ JNIEXPORT void JNICALL
 Java_org_kman_srtctest_rtc_PeerConnection_publishVideoSingleFrameImpl(JNIEnv *env, jobject thiz,
                                                                       jlong handle, jobject buf)
 {
-    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
+    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection *>(handle);
     if (!ptr) {
         return;
     }
@@ -304,8 +331,11 @@ Java_org_kman_srtctest_rtc_PeerConnection_publishVideoSingleFrameImpl(JNIEnv *en
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_org_kman_srtctest_rtc_PeerConnection_setVideoSimulcastCodecSpecificDataImpl(JNIEnv *env, jobject thiz,
-                                                                                 jlong handle, jobject layer, jobjectArray array)
+Java_org_kman_srtctest_rtc_PeerConnection_setVideoSimulcastCodecSpecificDataImpl(JNIEnv *env,
+                                                                                 jobject thiz,
+                                                                                 jlong handle,
+                                                                                 jobject layer,
+                                                                                 jobjectArray array)
 {
     const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection *>(handle);
     if (!ptr) {
@@ -314,7 +344,7 @@ Java_org_kman_srtctest_rtc_PeerConnection_setVideoSimulcastCodecSpecificDataImpl
 
     const auto layerName = gClassSimulcastLayer.getFieldString(env, layer, "name");
     if (layerName.empty()) {
-        const srtc::Error error = { srtc::Error::Code::InvalidData, "The layer name is empty" };
+        const srtc::Error error = {srtc::Error::Code::InvalidData, "The layer name is empty"};
         srtc::android::JavaError::throwSRtcException(env, error);
     }
 
@@ -328,17 +358,19 @@ Java_org_kman_srtctest_rtc_PeerConnection_setVideoSimulcastCodecSpecificDataImpl
 
         gClassJavaIoByteBuffer.callObjectMethod(env, item, "get", itemArray, 0, itemSize);
 
-        jboolean isCopy = { false };
+        jboolean isCopy = {false};
         const auto itemArrayPtr = env->GetByteArrayElements(itemArray, &isCopy);
 
-        list.emplace_back(reinterpret_cast<const uint8_t*>(itemArrayPtr), static_cast<size_t>(itemSize));
+        list.emplace_back(reinterpret_cast<const uint8_t *>(itemArrayPtr),
+                          static_cast<size_t>(itemSize));
 
         env->ReleaseByteArrayElements(itemArray, itemArrayPtr, JNI_ABORT);
         env->DeleteLocalRef(itemArray);
     }
 
     if (!list.empty()) {
-        const auto error = ptr->mConn->setVideoSimulcastCodecSpecificData(layerName, std::move(list));
+        const auto error = ptr->mConn->setVideoSimulcastCodecSpecificData(layerName,
+                                                                          std::move(list));
         if (error.isError()) {
             srtc::android::JavaError::throwSRtcException(env, error);
         }
@@ -348,16 +380,17 @@ Java_org_kman_srtctest_rtc_PeerConnection_setVideoSimulcastCodecSpecificDataImpl
 extern "C"
 JNIEXPORT void JNICALL
 Java_org_kman_srtctest_rtc_PeerConnection_publishVideoSimulcastFrameImpl(JNIEnv *env, jobject thiz,
-                                                                         jlong handle, jobject layer, jobject buf)
+                                                                         jlong handle,
+                                                                         jobject layer, jobject buf)
 {
-    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
+    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection *>(handle);
     if (!ptr) {
         return;
     }
 
     const auto layerName = gClassSimulcastLayer.getFieldString(env, layer, "name");
     if (layerName.empty()) {
-        const srtc::Error error = { srtc::Error::Code::InvalidData, "The layer name is empty" };
+        const srtc::Error error = {srtc::Error::Code::InvalidData, "The layer name is empty"};
         srtc::android::JavaError::throwSRtcException(env, error);
     }
 
@@ -384,13 +417,14 @@ Java_org_kman_srtctest_rtc_PeerConnection_publishAudioFrameImpl(JNIEnv *env, job
                                                                 jint sampleRate,
                                                                 jint channels)
 {
-    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection*>(handle);
+    const auto ptr = reinterpret_cast<srtc::android::JavaPeerConnection *>(handle);
     if (!ptr) {
         return;
     }
 
     const auto bufPtr = env->GetDirectBufferAddress(buf);
-    const auto error = ptr->publishAudioFrame(bufPtr, static_cast<size_t>(size), sampleRate, channels);
+    const auto error = ptr->publishAudioFrame(bufPtr, static_cast<size_t>(size), sampleRate,
+                                              channels);
     if (error.isError()) {
         srtc::android::JavaError::throwSRtcException(env, error);
         return;
@@ -424,7 +458,8 @@ void JavaPeerConnection::initializeJNI(JNIEnv *env)
     // Track
 
     gClassTrack.findClass(env, SRTC_PACKAGE_NAME "/Track")
-            .findMethod(env, "<init>", "(IIIL" SRTC_PACKAGE_NAME "/Track$CodecOptions;" "L" SRTC_PACKAGE_NAME "/SimulcastLayer;)V");
+            .findMethod(env, "<init>",
+                        "(IIIL" SRTC_PACKAGE_NAME "/Track$CodecOptions;" "L" SRTC_PACKAGE_NAME "/SimulcastLayer;)V");
 
     // CodecOptions
 
@@ -438,7 +473,8 @@ void JavaPeerConnection::initializeJNI(JNIEnv *env)
             .findField(env, "mVideoSimulcastTrackList", "Ljava/util/List;")
             .findField(env, "mAudioTrack", "L" SRTC_PACKAGE_NAME "/Track;")
             .findMethod(env, "fromNativeOnConnectionState", "(I)V")
-            .findMethod(env, "fromNativeOnPublishConnectionStats", "(L" SRTC_PACKAGE_NAME "/PeerConnection$PublishConnectionStats;)V");
+            .findMethod(env, "fromNativeOnPublishConnectionStats",
+                        "(L" SRTC_PACKAGE_NAME "/PeerConnection$PublishConnectionStats;)V");
 
     // OfferConfig
 
@@ -471,8 +507,9 @@ void JavaPeerConnection::initializeJNI(JNIEnv *env)
 
     // PubConnectionStats
 
-    gClassPublishConnectionStats.findClass(env, SRTC_PACKAGE_NAME "/PeerConnection$PublishConnectionStats")
-        .findMethod(env, "<init>", "(IIFFFF)V");
+    gClassPublishConnectionStats.findClass(env,
+                                           SRTC_PACKAGE_NAME "/PeerConnection$PublishConnectionStats")
+            .findMethod(env, "<init>", "(IIFFFF)V");
 
     // Logging
 
@@ -480,24 +517,25 @@ void JavaPeerConnection::initializeJNI(JNIEnv *env)
 }
 
 JavaPeerConnection::JavaPeerConnection(jobject thiz)
-    : mThiz(thiz)
-    , mConn(std::make_unique<PeerConnection>(Direction::Publish))
-    , mOpusEncoder(nullptr)
+        : mThiz(thiz), mConn(std::make_unique<PeerConnection>(Direction::Publish)),
+          mOpusEncoder(nullptr)
 {
-    mConn->setConnectionStateListener([this](PeerConnection::ConnectionState state){
+    mConn->setConnectionStateListener([this](PeerConnection::ConnectionState state) {
         const auto env = getJNIEnv();
-        gClassPeerConnection.callVoidMethod(env, mThiz, "fromNativeOnConnectionState", static_cast<jint>(state));
+        gClassPeerConnection.callVoidMethod(env, mThiz, "fromNativeOnConnectionState",
+                                            static_cast<jint>(state));
     });
-    mConn->setPublishConnectionStatsListener([this](const PublishConnectionStats& stats) {
+    mConn->setPublishConnectionStatsListener([this](const PublishConnectionStats &stats) {
         const auto env = getJNIEnv();
         const auto statsJ = gClassPublishConnectionStats.newObject(env,
-                                           static_cast<jint>(stats.packet_count),
-                                           static_cast<jint>(stats.byte_count),
-                                           static_cast<jfloat>(stats.packets_lost_percent),
-                                           static_cast<jfloat>(stats.rtt_ms),
-                                           static_cast<jfloat>(stats.bandwidth_actual_kbit_per_second),
-                                           static_cast<jfloat>(stats.bandwidth_suggested_kbit_per_second));
-        gClassPeerConnection.callVoidMethod(env, mThiz, "fromNativeOnPublishConnectionStats", statsJ);
+                                                                   static_cast<jint>(stats.packet_count),
+                                                                   static_cast<jint>(stats.byte_count),
+                                                                   static_cast<jfloat>(stats.packets_lost_percent),
+                                                                   static_cast<jfloat>(stats.rtt_ms),
+                                                                   static_cast<jfloat>(stats.bandwidth_actual_kbit_per_second),
+                                                                   static_cast<jfloat>(stats.bandwidth_suggested_kbit_per_second));
+        gClassPeerConnection.callVoidMethod(env, mThiz, "fromNativeOnPublishConnectionStats",
+                                            statsJ);
     });
 }
 
@@ -512,18 +550,18 @@ JavaPeerConnection::~JavaPeerConnection()
     env->DeleteGlobalRef(mThiz);
 }
 
-Error JavaPeerConnection::publishVideoSingleFrame(ByteBuffer&& frame)
+Error JavaPeerConnection::publishVideoSingleFrame(ByteBuffer &&frame)
 {
     return mConn->publishVideoSingleFrame(std::move(frame));
 }
 
-Error JavaPeerConnection::publishVideoSimulcastFrame(const std::string& layerName,
-                                                     ByteBuffer&& frame)
+Error JavaPeerConnection::publishVideoSimulcastFrame(const std::string &layerName,
+                                                     ByteBuffer &&frame)
 {
     return mConn->publishVideoSimulcastFrame(layerName, std::move(frame));
 }
 
-Error JavaPeerConnection::publishAudioFrame(const void* frame,
+Error JavaPeerConnection::publishAudioFrame(const void *frame,
                                             size_t size,
                                             int sampleRate,
                                             int channels)
@@ -531,7 +569,7 @@ Error JavaPeerConnection::publishAudioFrame(const void* frame,
     // This is thread safe because we have "synchronized" on the Java side
     if (mOpusEncoder == nullptr) {
         const auto encoderSize = opus_encoder_get_size(channels);
-        mOpusEncoder = static_cast<OpusEncoder*>(malloc(encoderSize));
+        mOpusEncoder = static_cast<OpusEncoder *>(malloc(encoderSize));
         std::memset(mOpusEncoder, 0, encoderSize);
 
         if (opus_encoder_init(mOpusEncoder, sampleRate, channels, OPUS_APPLICATION_VOIP) != 0) {
@@ -545,13 +583,13 @@ Error JavaPeerConnection::publishAudioFrame(const void* frame,
     }
 
     if (mOpusEncoder != nullptr) {
-        ByteBuffer output { 4000 };
+        ByteBuffer output{4000};
 
         const auto encodedSize = opus_encode(mOpusEncoder,
-            static_cast<const opus_int16*>(frame),
-            static_cast<int>(size / sizeof(opus_int16) / channels),
-            output.data(),
-            static_cast<opus_int32>(output.capacity()));
+                                             static_cast<const opus_int16 *>(frame),
+                                             static_cast<int>(size / sizeof(opus_int16) / channels),
+                                             output.data(),
+                                             static_cast<opus_int32>(output.capacity()));
 
         if (encodedSize > 0) {
             output.resize(static_cast<size_t>(encodedSize));
