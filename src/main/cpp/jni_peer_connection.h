@@ -28,6 +28,7 @@ public:
 private:
     jobject mThiz;
     OpusEncoder* mOpusEncoder;
+    int64_t mOpusPts;
 };
 
 }

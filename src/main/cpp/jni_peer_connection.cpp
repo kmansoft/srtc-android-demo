@@ -518,7 +518,7 @@ void JavaPeerConnection::initializeJNI(JNIEnv *env)
 
 JavaPeerConnection::JavaPeerConnection(jobject thiz)
         : mThiz(thiz), mConn(std::make_unique<PeerConnection>(Direction::Publish)),
-          mOpusEncoder(nullptr)
+          mOpusEncoder(nullptr), mOpusPts(0)
 {
     mConn->setConnectionStateListener([this](PeerConnection::ConnectionState state) {
         const auto env = getJNIEnv();
@@ -552,13 +552,15 @@ JavaPeerConnection::~JavaPeerConnection()
 
 Error JavaPeerConnection::publishVideoSingleFrame(ByteBuffer &&frame)
 {
-    return mConn->publishVideoSingleFrame(std::move(frame));
+    const auto pts_usec = getStableTimeMicros();
+    return mConn->publishVideoSingleFrame(pts_usec, std::move(frame));
 }
 
 Error JavaPeerConnection::publishVideoSimulcastFrame(const std::string &layerName,
                                                      ByteBuffer &&frame)
 {
-    return mConn->publishVideoSimulcastFrame(layerName, std::move(frame));
+    const auto pts_usec = getStableTimeMicros();
+    return mConn->publishVideoSimulcastFrame(pts_usec, layerName, std::move(frame));
 }
 
 Error JavaPeerConnection::publishAudioFrame(const void *frame,
@@ -585,15 +587,27 @@ Error JavaPeerConnection::publishAudioFrame(const void *frame,
     if (mOpusEncoder != nullptr) {
         ByteBuffer output{4000};
 
+        const auto now = getStableTimeMicros();
+        if (mOpusPts == 0 || now - mOpusPts > 100 * 1000) {
+            mOpusPts = now;
+        }
+
+        // Number of samples
+        const auto frame_size = static_cast<int>(size / sizeof(opus_int16) / channels);
+        const auto frame_micros = static_cast<int>(frame_size * 1000l * 1000l / sampleRate);
+
+        const auto pts_usec = mOpusPts;
+        mOpusPts += frame_micros;
+
         const auto encodedSize = opus_encode(mOpusEncoder,
                                              static_cast<const opus_int16 *>(frame),
-                                             static_cast<int>(size / sizeof(opus_int16) / channels),
+                                             frame_size,
                                              output.data(),
                                              static_cast<opus_int32>(output.capacity()));
 
         if (encodedSize > 0) {
             output.resize(static_cast<size_t>(encodedSize));
-            return mConn->publishAudioFrame(std::move(output));
+            return mConn->publishAudioFrame(pts_usec, std::move(output));
         }
     }
 
