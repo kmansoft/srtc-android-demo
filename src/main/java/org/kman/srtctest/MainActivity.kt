@@ -1117,7 +1117,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         private const val H264_PROFILE_MAIN = 0x4d00
 
         private const val RECORDER_SAMPLE_RATE = 48000
-        private const val RECORDER_CHUNK_MS = 20
+        private const val RECORDER_CHUNK_MS = 10
         private const val RECORDER_CHANNELS = 1
         private const val RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT
 
