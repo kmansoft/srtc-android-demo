@@ -71,7 +71,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mSurfaceViewPreview = findViewById(R.id.preview)
         mViewGroupBottomBar = findViewById(R.id.bottom_bar)
         mViewGroupInputBar = findViewById(R.id.input_bar)
-        mTextRms = findViewById(R.id.audio_rms)
+        mTextCodecInfo = findViewById(R.id.codec_info)
+        mTextAudioRms = findViewById(R.id.audio_rms)
 
         mButtonConnect.setOnClickListener {
             onClickConnect()
@@ -120,7 +121,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BACK && event != null && event.repeatCount ==  0) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && event != null && event.repeatCount == 0) {
             if (!mIsConnectUIVisible) {
                 disconnect()
                 showConnectUI(true)
@@ -146,7 +147,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mPreviewTarget?.release()
 
         val frame = holder.surfaceFrame
-        mPreviewTarget = mRenderThread.createTarget(holder.surface, "preview", frame.width(), frame.height())
+        mPreviewTarget =
+            mRenderThread.createTarget(holder.surface, "preview", frame.width(), frame.height())
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
@@ -223,7 +225,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
     @SuppressLint("SetTextI18n")
     private fun setFieldsFromIntent(intent: Intent?) {
-         val data = intent?.data ?: return
+        val data = intent?.data ?: return
 
         MyLog.i(TAG, "New intent: %s", data)
 
@@ -278,7 +280,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             mIsConnectUIVisible = show
 
             mViewGroupInputBar.visibility = if (show) View.VISIBLE else View.GONE
-            mButtonConnect.text = getString(if (show) R.string.whip_connect else R.string.whip_disconnect)
+            mButtonConnect.text =
+                getString(if (show) R.string.whip_connect else R.string.whip_disconnect)
         }
     }
 
@@ -338,37 +341,45 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             val videoConfig = PeerConnection.PubVideoConfig()
 
             val codecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
-            val codecH264 = findEncoder(codecList, MIME_VIDEO_H264, false) ?: findEncoder(
-                codecList,
-                MIME_VIDEO_H264,
-                true
-            )
-            if (codecH264 == null) {
+            val codecVP8 = findEncoder(codecList, MIME_VIDEO_VP8)
+            val codecH264 = findEncoder(codecList, MIME_VIDEO_H264)
+            if (codecVP8 == null && codecH264 == null) {
                 Util.toast(this, R.string.error_no_encoder)
                 return
             }
 
-            videoConfig.codecList.add(
-                // Baseline
-                PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_H264, 0x42001f),
-            )
-
-            val capsH264 = codecH264.getCapabilitiesForType(MIME_VIDEO_H264)
-            if (isProfileSupported(
-                    capsH264,
-                    MediaCodecInfo.CodecProfileLevel.AVCProfileConstrainedBaseline
-                )
-            ) {
-                // Baseline constrained
+            if (codecVP8 != null) {
+                // VP8
                 videoConfig.codecList.add(
-                    PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_H264, 0x42e01f)
+                    // Baseline
+                    PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_VP8, 0),
                 )
             }
-            if (isProfileSupported(capsH264, MediaCodecInfo.CodecProfileLevel.AVCProfileMain)) {
-                // Main
+
+            if (codecH264 != null) {
+                // H264
                 videoConfig.codecList.add(
-                    PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_H264, 0x4d001f)
+                    // Baseline
+                    PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_H264, 0x42001f),
                 )
+
+                val capsH264 = codecH264.getCapabilitiesForType(MIME_VIDEO_H264)
+                if (isProfileSupported(
+                        capsH264,
+                        MediaCodecInfo.CodecProfileLevel.AVCProfileConstrainedBaseline
+                    )
+                ) {
+                    // Baseline constrained
+                    videoConfig.codecList.add(
+                        PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_H264, 0x42e01f)
+                    )
+                }
+                if (isProfileSupported(capsH264, MediaCodecInfo.CodecProfileLevel.AVCProfileMain)) {
+                    // Main
+                    videoConfig.codecList.add(
+                        PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_H264, 0x4d001f)
+                    )
+                }
             }
 
             // Simulcast
@@ -490,20 +501,24 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             }
 
             if (mVideoEncoderSingle == null) {
-                mVideoEncoderSingle = EncoderWrapper(this, videoSingleTrack, size,
+                mVideoEncoderSingle = EncoderWrapper(
+                    this, videoSingleTrack, size,
                     BITRATE_HIGH,
                     ENCODE_FRAMES_PER_SECOND,
-                    mRenderThread, mEncoderHandler)
+                    mRenderThread, mEncoderHandler
+                )
                 mVideoEncoderSingle?.start()
             }
         } else if (!videoSimulcastTrackList.isNullOrEmpty()) {
             for (track in videoSimulcastTrackList) {
                 val layer = requireNotNull(track.simulcastLayer)
                 val size = Size(layer.width, layer.height)
-                val encoder = EncoderWrapper(this, track, size,
+                val encoder = EncoderWrapper(
+                    this, track, size,
                     layer.kilobitPerSecond,
                     layer.framesPerSecond,
-                    mRenderThread, mEncoderHandler)
+                    mRenderThread, mEncoderHandler
+                )
                 if (encoder.start()) {
                     mVideoEncoderSimulcastList.add(encoder)
                 }
@@ -529,12 +544,16 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         val stateId = when (state) {
             PeerConnection.CONNECTION_STATE_CONNECTING ->
                 R.string.pc_state_connecting
+
             PeerConnection.CONNECTION_STATE_CONNECTED ->
                 R.string.pc_state_connected
+
             PeerConnection.CONNECTION_STATE_FAILED ->
                 R.string.pc_state_failed
+
             PeerConnection.CONNECTION_STATE_CLOSED ->
                 R.string.pc_state_closed
+
             else -> return
         }
 
@@ -567,7 +586,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             // Find the camera
             val cm = getSystemService(CameraManager::class.java)
             val frontCameraId = cm.cameraIdList.find {
-                cm.getCameraCharacteristics(it).get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT
+                cm.getCameraCharacteristics(it)
+                    .get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT
             }
 
             if (frontCameraId == null) {
@@ -599,7 +619,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     setSampleRate(RECORDER_SAMPLE_RATE)
                     setChannelMask(
                         if (stereo) AudioFormat.CHANNEL_IN_STEREO
-                        else AudioFormat.CHANNEL_IN_MONO)
+                        else AudioFormat.CHANNEL_IN_MONO
+                    )
                     setEncoding(RECORDER_AUDIO_ENCODING)
                 }.build()
 
@@ -630,7 +651,11 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     }
 
     private fun initCameraCapture(cameraId: String) {
-        if (ContextCompat.checkSelfPermission(this, PERM_CAMERA) == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                PERM_CAMERA
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
             val cm = getSystemService(CameraManager::class.java)
             val chars = cm.getCameraCharacteristics(cameraId)
             val streamConfigMap = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
@@ -641,8 +666,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             }
 
             val chosenSize =
-                outputSizes.find { it.width == 1920 && it.height == 1080 } ?:
-                outputSizes.find { it.width == 1280 && it.height == 720}
+                outputSizes.find { it.width == 1920 && it.height == 1080 }
+                    ?: outputSizes.find { it.width == 1280 && it.height == 720 }
             if (chosenSize == null) {
                 Util.toast(this, R.string.error_no_camera_output_sizes)
                 return
@@ -651,7 +676,11 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             mCameraOrientation = chars.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 0
 
             mCameraTexture?.release()
-            mCameraTexture = mRenderThread.createCameraTexture(chosenSize.width, chosenSize.height, mCameraOrientation)
+            mCameraTexture = mRenderThread.createCameraTexture(
+                chosenSize.width,
+                chosenSize.height,
+                mCameraOrientation
+            )
 
             mCameraTexture?.also {
                 it.texture.setOnFrameAvailableListener({ surfaceTexture ->
@@ -743,9 +772,22 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         return surfaceList
     }
 
-    private fun findEncoder(codecList: MediaCodecList,
-                            mimeType: String,
-                            allowSoftware: Boolean) : MediaCodecInfo? {
+    private fun findEncoder(
+        codecList: MediaCodecList,
+        mimeType: String
+    ): MediaCodecInfo? {
+        return findEncoderImpl(codecList, mimeType, false) ?: findEncoderImpl(
+            codecList,
+            mimeType,
+            true
+        )
+    }
+
+    private fun findEncoderImpl(
+        codecList: MediaCodecList,
+        mimeType: String,
+        allowSoftware: Boolean
+    ): MediaCodecInfo? {
         for (info in codecList.codecInfos) {
             if (info.isEncoder) {
                 if (allowSoftware || info.isHardwareAccelerated) {
@@ -761,7 +803,10 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         return null
     }
 
-    private fun isProfileSupported(caps: MediaCodecInfo.CodecCapabilities, profileId: Int): Boolean {
+    private fun isProfileSupported(
+        caps: MediaCodecInfo.CodecCapabilities,
+        profileId: Int
+    ): Boolean {
         for (profile in caps.profileLevels) {
             if (profile.profile == profileId) {
                 return true
@@ -771,7 +816,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     }
 
     private fun findEncoderProfile(profileId: Int): Int {
-        return when(profileId) {
+        return when (profileId) {
             H264_PROFILE_BASELINE -> MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline
             H264_PROFILE_CONSTRAINED_BASELINE -> MediaCodecInfo.CodecProfileLevel.AVCProfileConstrainedBaseline
             H264_PROFILE_MAIN -> MediaCodecInfo.CodecProfileLevel.AVCProfileMain
@@ -780,7 +825,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     }
 
     private fun findEncoderLevel(levelId: Int): Int {
-        return when(levelId) {
+        return when (levelId) {
             30 -> MediaCodecInfo.CodecProfileLevel.AVCLevel3
             31 -> MediaCodecInfo.CodecProfileLevel.AVCLevel31
             40 -> MediaCodecInfo.CodecProfileLevel.AVCLevel4
@@ -813,7 +858,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             if (r > 0) {
                 val rms = calculateRms(shortBuffer, r / 2)
                 mMainHandler.post {
-                    showRms(rms)
+                    showAudioRms(rms)
                 }
 
                 try {
@@ -844,6 +889,11 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
     }
 
+    private fun showCodec(name: String) {
+        mTextCodecInfo.text = getString(R.string.codec_info, name)
+        mTextCodecInfo.visibility = View.VISIBLE
+    }
+
     private fun calculateRms(buffer: ShortBuffer, sampleCount: Int): Float {
         var sum = 0.0f
         for (i in 0 until sampleCount) {
@@ -853,8 +903,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         return sqrt(sum / sampleCount)
     }
 
-    private fun showRms(rms: Float) {
-        mTextRms.text = String.format(Locale.US, "rms = %.2f", rms)
+    private fun showAudioRms(rms: Float) {
+        mTextAudioRms.text = String.format(Locale.US, "rms = %.2f", rms)
+        mTextAudioRms.visibility = View.VISIBLE
     }
 
     private fun setVideoCodecSpecificData(track: Track, csdList: Array<ByteBuffer>) {
@@ -893,7 +944,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private lateinit var mSurfaceViewPreview: SurfaceView
     private lateinit var mViewGroupBottomBar: ViewGroup
     private lateinit var mViewGroupInputBar: ViewGroup
-    private lateinit var mTextRms: TextView
+    private lateinit var mTextCodecInfo: TextView
+    private lateinit var mTextAudioRms: TextView
 
     private lateinit var mRenderThread: RenderThread
 
@@ -925,14 +977,15 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         val framerate: Int,
         val renderThread: RenderThread,
         val handler: Handler,
-        ) {
+    ) {
 
         var encoder: MediaCodec? = null
         var renderTarget: RenderThread.RenderTarget? = null
 
         fun start(): Boolean {
             val codec = track.codec
-            val mime = when(codec) {
+            val mime = when (codec) {
+                PeerConnection.VIDEO_CODEC_VP8 -> MIME_VIDEO_VP8
                 PeerConnection.VIDEO_CODEC_H264 -> MIME_VIDEO_H264
                 else -> {
                     Util.toast(activity, R.string.error_unsupported_video_codec, codec)
@@ -940,9 +993,15 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 }
             }
 
+            val name = when (codec) {
+                PeerConnection.VIDEO_CODEC_VP8 -> "VP8"
+                PeerConnection.VIDEO_CODEC_H264 -> "H264"
+                else -> "?"
+            }
+            activity.showCodec(name)
+
             val codecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
-            val codecInfo = activity.findEncoder(codecList, mime, false) ?:
-                    activity.findEncoder(codecList, mime, true)
+            val codecInfo = activity.findEncoder(codecList, mime)
             if (codecInfo == null) {
                 Util.toast(activity, R.string.error_no_encoder)
             } else {
@@ -952,7 +1011,10 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     setInteger(MediaFormat.KEY_BIT_RATE, bitrate * 1024)
                     setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
                     setInteger(MediaFormat.KEY_FRAME_RATE, framerate)
-                    setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
+                    setInteger(
+                        MediaFormat.KEY_COLOR_FORMAT,
+                        MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface
+                    )
 
                     if (codec == PeerConnection.VIDEO_CODEC_H264) {
                         val codecOptions = track.codecOptions
@@ -961,7 +1023,10 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                             MediaFormat.KEY_PROFILE,
                             activity.findEncoderProfile(profileLevelId shr 8)
                         )
-                        setInteger(MediaFormat.KEY_LEVEL, activity.findEncoderLevel(profileLevelId and 0xff))
+                        setInteger(
+                            MediaFormat.KEY_LEVEL,
+                            activity.findEncoderLevel(profileLevelId and 0xff)
+                        )
                         if (profileLevelId shr 8 == H264_PROFILE_MAIN) {
                             setInteger(MediaFormat.KEY_MAX_B_FRAMES, 0)
                         }
@@ -985,7 +1050,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     encoder?.start()
 
                     val name = "encoder-" + (track.simulcastLayer?.name ?: "default")
-                    renderTarget = renderThread.createTarget(inputSurface, name, size.width, size.height)
+                    renderTarget =
+                        renderThread.createTarget(inputSurface, name, size.width, size.height)
                 } catch (x: Exception) {
                     MyLog.i(TAG, "Error configuring the encoder: %s", x.message)
                     Util.toast(activity, R.string.error_starting_encoder)
@@ -1047,11 +1113,11 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 val csdList = ArrayList<ByteBuffer>()
 
                 if (csd0 != null) {
-                    MyLog.i(TAG,"Encoder format csd0: %d bytes", csd0.limit())
+                    MyLog.i(TAG, "Encoder format csd0: %d bytes", csd0.limit())
                     csdList.add(csd0)
                 }
                 if (csd1 != null) {
-                    MyLog.i(TAG,"Encoder format csd1: %d bytes", csd1.limit())
+                    MyLog.i(TAG, "Encoder format csd1: %d bytes", csd1.limit())
                     csdList.add(csd1)
                 }
 
@@ -1108,8 +1174,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         private const val PREF_KEY_TOKEN = "whip_token"
 
         private const val PERM_CAMERA = android.Manifest.permission.CAMERA
-        private const val PERM_RECORD_AUDIO =  android.Manifest.permission.RECORD_AUDIO
+        private const val PERM_RECORD_AUDIO = android.Manifest.permission.RECORD_AUDIO
 
+        private const val MIME_VIDEO_VP8 = "video/x-vnd.on2.vp8"
         private const val MIME_VIDEO_H264 = "video/avc"
 
         private const val H264_PROFILE_BASELINE = 0x4200

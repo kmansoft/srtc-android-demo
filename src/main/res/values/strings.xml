@@ -42,4 +42,6 @@
 
     <string name="pc_time_to_connect">in %d ms</string>
     <string name="pc_connection_stats">Stats: act %1$.2f kb/s, sugg %2$.2f kb/s, rtt %3$.2f ms</string>
+
+    <string name="codec_info">Codec: %s</string>
 </resources>

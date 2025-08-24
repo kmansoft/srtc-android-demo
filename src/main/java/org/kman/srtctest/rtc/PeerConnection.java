@@ -35,7 +35,8 @@ public class PeerConnection {
      * Definitions for publish offer and answer
      */
 
-    public static final int VIDEO_CODEC_H264 = 1;
+    public static final int VIDEO_CODEC_VP8 = 1;
+    public static final int VIDEO_CODEC_H264 = 2;
 
     public static final int AUDIO_CODEC_OPUS = 100;
 

@@ -67,6 +67,20 @@
     </LinearLayout>
 
     <TextView
+        android:id="@+id/codec_info"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:background="#404040"
+        android:padding="8dp"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:visibility="gone" />
+
+    <TextView
         android:id="@+id/audio_rms"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -77,6 +91,7 @@
         android:background="#404040"
         android:padding="8dp"
         android:textColor="@color/white"
-        android:textSize="16sp" />
+        android:textSize="16sp"
+        android:visibility="gone" />
 
 </RelativeLayout>
