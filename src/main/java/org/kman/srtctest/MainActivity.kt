@@ -343,7 +343,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             val codecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
             val codecVP8 = findEncoder(codecList, MIME_VIDEO_VP8)
             val codecH264 = findEncoder(codecList, MIME_VIDEO_H264)
-            if (codecVP8 == null && codecH264 == null) {
+            val codecH265 = findEncoderImpl(codecList, MIME_VIDEO_H265, false)
+            if (codecVP8 == null && codecH264 == null && codecH265 == null) {
                 Util.toast(this, R.string.error_no_encoder)
                 return
             }
@@ -351,7 +352,6 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             if (codecVP8 != null) {
                 // VP8
                 videoConfig.codecList.add(
-                    // Baseline
                     PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_VP8, 0),
                 )
             }
@@ -380,6 +380,13 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                         PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_H264, 0x4d001f)
                     )
                 }
+            }
+
+            if (codecH265 != null) {
+                // VP8
+                videoConfig.codecList.add(
+                    PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_H265, 0),
+                )
             }
 
             // Simulcast
@@ -987,6 +994,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             val mime = when (codec) {
                 PeerConnection.VIDEO_CODEC_VP8 -> MIME_VIDEO_VP8
                 PeerConnection.VIDEO_CODEC_H264 -> MIME_VIDEO_H264
+                PeerConnection.VIDEO_CODEC_H265 -> MIME_VIDEO_H265
                 else -> {
                     Util.toast(activity, R.string.error_unsupported_video_codec, codec)
                     return false
@@ -996,6 +1004,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             val name = when (codec) {
                 PeerConnection.VIDEO_CODEC_VP8 -> "VP8"
                 PeerConnection.VIDEO_CODEC_H264 -> "H264"
+                PeerConnection.VIDEO_CODEC_H265 -> "H265"
                 else -> "?"
             }
             activity.showCodec(name)
@@ -1178,6 +1187,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
         private const val MIME_VIDEO_VP8 = "video/x-vnd.on2.vp8"
         private const val MIME_VIDEO_H264 = "video/avc"
+        private const val MIME_VIDEO_H265 = "video/hevc"
 
         private const val H264_PROFILE_BASELINE = 0x4200
         private const val H264_PROFILE_CONSTRAINED_BASELINE = 0x42e0

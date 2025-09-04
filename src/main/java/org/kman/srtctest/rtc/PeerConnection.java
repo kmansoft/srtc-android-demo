@@ -37,6 +37,7 @@ public class PeerConnection {
 
     public static final int VIDEO_CODEC_VP8 = 1;
     public static final int VIDEO_CODEC_H264 = 2;
+    public static final int VIDEO_CODEC_H265 = 3;
 
     public static final int AUDIO_CODEC_OPUS = 100;
 
