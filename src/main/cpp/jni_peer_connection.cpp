@@ -80,7 +80,8 @@ Java_org_kman_srtctest_rtc_PeerConnection_initPublishOfferImpl(JNIEnv *env, jobj
 
     const srtc::PubOfferConfig offerConfig = {
             .cname = gClassOfferConfig.getFieldString(env, config, "cname"),
-            .enable_bwe = true
+            .enable_bwe = true,
+            .enable_rfc8851 = true
     };
 
     // Video
