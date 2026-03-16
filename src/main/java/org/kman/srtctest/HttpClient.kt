@@ -48,7 +48,7 @@ object HttpClient {
                             }
                             return@submit
                         } else {
-                            val data = response.body?.bytes()
+                            val data = response.body.bytes()
                             mMainHandler.post {
                                 callback.onCompleted(response, data, null)
                             }
