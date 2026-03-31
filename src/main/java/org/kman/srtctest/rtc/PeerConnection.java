@@ -220,6 +220,16 @@ public class PeerConnection {
         }
     }
 
+    public interface PublishKeyFrameRequestedListener {
+        void onPublishKeyFrameRequested();
+    }
+
+    public void setPublishKeyFrameRequestedListener(PublishKeyFrameRequestedListener listener) {
+        synchronized (mListenerLock) {
+            mPublishKeyFrameRequestedListener = listener;
+        }
+    }
+
     // Implementation
 
     static {
@@ -270,6 +280,15 @@ public class PeerConnection {
         });
     }
 
+    void fromNativeOnKeyFrameRequest() {
+        mMainHandler.post(() -> {
+            synchronized (mListenerLock) {
+                if (mPublishKeyFrameRequestedListener != null) {
+                    mPublishKeyFrameRequestedListener.onPublishKeyFrameRequested();
+                }
+            }
+        });
+    }
     void fromNativeOnPublishConnectionStats(PublishConnectionStats stats) {
         mMainHandler.post(() -> {
             synchronized (mListenerLock) {
@@ -292,4 +311,5 @@ public class PeerConnection {
     private final Object mListenerLock = new Object();
     private ConnectionStateListener mConnectionStateListener;
     private PublishConnectionStatsListener mPublishConnectionStatsListener;
+    private PublishKeyFrameRequestedListener mPublishKeyFrameRequestedListener;
 }

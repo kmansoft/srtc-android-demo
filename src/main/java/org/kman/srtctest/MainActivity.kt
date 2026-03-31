@@ -53,6 +53,7 @@ import java.nio.ShortBuffer
 import java.nio.charset.StandardCharsets
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.PI
 import kotlin.math.sqrt
 
 class MainActivity : Activity(), SurfaceHolder.Callback {
@@ -330,6 +331,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 setPublishConnectionStatsListener { stats ->
                     onPeerConnectionPublishStats(stats)
                 }
+                setPublishKeyFrameRequestedListener {
+                    onPeerConnectionKeyFrameRequested()
+                }
             }
 
             // Create the SDP offer
@@ -584,6 +588,13 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         mStatusTextView.text = message
     }
 
+    private fun onPeerConnectionKeyFrameRequested() {
+        mVideoEncoderSingle?.requestKeyFrame()
+
+        for (encoder in mVideoEncoderSimulcastList) {
+            encoder.requestKeyFrame()
+        }
+    }
 
     private fun initCameraCapture() {
         if (!mIsInitCameraDone) {
@@ -987,6 +998,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     ) {
 
         var encoder: MediaCodec? = null
+        var created: Long = 0L
         var renderTarget: RenderThread.RenderTarget? = null
 
         fun start(): Boolean {
@@ -1057,6 +1069,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     val inputSurface = requireNotNull(encoder?.createInputSurface())
 
                     encoder?.start()
+                    created = SystemClock.elapsedRealtime()
 
                     val name = "encoder-" + (track.simulcastLayer?.name ?: "default")
                     renderTarget =
@@ -1075,6 +1088,20 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             }
 
             return true
+        }
+
+        fun requestKeyFrame() {
+            val now = SystemClock.elapsedRealtime()
+            if (now - created > 5 * 1000L) {
+                // We only need to generate additional key frames whne we connect
+                return
+            }
+
+            val e = encoder ?: return
+            val params = Bundle().apply {
+                putInt(MediaCodec.PARAMETER_KEY_REQUEST_SYNC_FRAME, 0)
+            }
+            e.setParameters(params)
         }
 
         fun release() {

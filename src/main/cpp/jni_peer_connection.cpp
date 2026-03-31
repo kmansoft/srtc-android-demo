@@ -474,6 +474,7 @@ void JavaPeerConnection::initializeJNI(JNIEnv *env)
             .findField(env, "mVideoSimulcastTrackList", "Ljava/util/List;")
             .findField(env, "mAudioTrack", "L" SRTC_PACKAGE_NAME "/Track;")
             .findMethod(env, "fromNativeOnConnectionState", "(I)V")
+            .findMethod(env, "fromNativeOnKeyFrameRequest", "()V")
             .findMethod(env, "fromNativeOnPublishConnectionStats",
                         "(L" SRTC_PACKAGE_NAME "/PeerConnection$PublishConnectionStats;)V");
 
@@ -537,6 +538,10 @@ JavaPeerConnection::JavaPeerConnection(jobject thiz)
                                                                    static_cast<jfloat>(stats.bandwidth_suggested_kbit_per_second));
         gClassPeerConnection.callVoidMethod(env, mThiz, "fromNativeOnPublishConnectionStats",
                                             statsJ);
+    });
+    mConn->setPublishKeyFrameRequestedListener([this]() {
+        const auto env = getJNIEnv();
+        gClassPeerConnection.callVoidMethod(env, mThiz, "fromNativeOnKeyFrameRequest");
     });
 }
 
