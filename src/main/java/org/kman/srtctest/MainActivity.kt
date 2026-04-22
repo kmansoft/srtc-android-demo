@@ -346,9 +346,10 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
             val codecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
             val codecVP8 = findEncoder(codecList, MIME_VIDEO_VP8)
+            val codecVP9 = findEncoder(codecList, MIME_VIDEO_VP9)
             val codecH264 = findEncoder(codecList, MIME_VIDEO_H264)
             val codecH265 = findEncoderImpl(codecList, MIME_VIDEO_H265, false)
-            if (codecVP8 == null && codecH264 == null && codecH265 == null) {
+            if (codecVP8 == null && codecVP9 == null && codecH264 == null && codecH265 == null) {
                 Util.toast(this, R.string.error_no_encoder)
                 return
             }
@@ -357,6 +358,13 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 // VP8
                 videoConfig.codecList.add(
                     PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_VP8, 0),
+                )
+            }
+
+            if (codecVP9 != null) {
+                // VP9
+                videoConfig.codecList.add(
+                    PeerConnection.PubVideoCodec(PeerConnection.VIDEO_CODEC_VP9, 0),
                 )
             }
 
@@ -1005,6 +1013,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             val codec = track.codec
             val mime = when (codec) {
                 PeerConnection.VIDEO_CODEC_VP8 -> MIME_VIDEO_VP8
+                PeerConnection.VIDEO_CODEC_VP9 -> MIME_VIDEO_VP9
                 PeerConnection.VIDEO_CODEC_H264 -> MIME_VIDEO_H264
                 PeerConnection.VIDEO_CODEC_H265 -> MIME_VIDEO_H265
                 else -> {
@@ -1015,6 +1024,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
             val name = when (codec) {
                 PeerConnection.VIDEO_CODEC_VP8 -> "VP8"
+                PeerConnection.VIDEO_CODEC_VP9 -> "VP9"
                 PeerConnection.VIDEO_CODEC_H264 -> "H264"
                 PeerConnection.VIDEO_CODEC_H265 -> "H265"
                 else -> "?"
@@ -1213,6 +1223,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         private const val PERM_RECORD_AUDIO = android.Manifest.permission.RECORD_AUDIO
 
         private const val MIME_VIDEO_VP8 = "video/x-vnd.on2.vp8"
+        private const val MIME_VIDEO_VP9 = "video/x-vnd.on2.vp9"
         private const val MIME_VIDEO_H264 = "video/avc"
         private const val MIME_VIDEO_H265 = "video/hevc"
 
