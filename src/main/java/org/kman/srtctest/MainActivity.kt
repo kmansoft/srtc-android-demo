@@ -47,6 +47,7 @@ import org.kman.srtctest.rtc.PeerConnection
 import org.kman.srtctest.rtc.SimulcastLayer
 import org.kman.srtctest.rtc.Track
 import org.kman.srtctest.util.MyLog
+import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.ShortBuffer
@@ -455,7 +456,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
             showConnectUI(false)
 
-            // offer = Util.loadRawResource(this, R.raw.pub_offer_chrome_v_only)
+            MyLog.i(TAG, "SDP offer:\n%s", offer)
 
             val request = Request.Builder().apply {
                 url(server)
@@ -496,15 +497,13 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                             showConnectUI(true)
                             return
                         }
-
-                        onPublishSdpCompleted()
                     }
                 }
             })
         }
     }
 
-    private fun onPublishSdpCompleted() {
+    private fun onConnectionCompleted() {
         val videoSingleTrack = mPeerConnection?.videoSingleTrack
         val videoSimulcastTrackList = mPeerConnection?.videoSimulcastTrackList
         val audioTrack = mPeerConnection?.audioTrack
@@ -564,8 +563,11 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             PeerConnection.CONNECTION_STATE_CONNECTING ->
                 R.string.pc_state_connecting
 
-            PeerConnection.CONNECTION_STATE_CONNECTED ->
+            PeerConnection.CONNECTION_STATE_CONNECTED -> {
+                onConnectionCompleted()
+
                 R.string.pc_state_connected
+            }
 
             PeerConnection.CONNECTION_STATE_FAILED ->
                 R.string.pc_state_failed
@@ -1130,6 +1132,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
 
         private val callback = object : MediaCodec.Callback() {
+            var savedCsdList: List<ByteBuffer>? = null
+
             override fun onInputBufferAvailable(codec: MediaCodec, index: Int) {
             }
 
@@ -1138,8 +1142,14 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 index: Int,
                 info: MediaCodec.BufferInfo
             ) {
-                val buffer = codec.getOutputBuffer(index) ?: return
+                if ((info.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0) {
+                    val csdList = savedCsdList
+                    if (csdList != null) {
+                        activity.setVideoCodecSpecificData(track, csdList.toTypedArray())
+                    }
+                }
 
+                val buffer = codec.getOutputBuffer(index) ?: return
                 try {
                     activity.publishVideoFrame(track, buffer)
                 } catch (x: Exception) {
@@ -1173,6 +1183,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     } catch (x: Exception) {
                         reportErrorToast(R.string.error_setting_video_frame_csd, x.message)
                     }
+
+                    savedCsdList = csdList
                 }
             }
 

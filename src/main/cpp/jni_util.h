@@ -6,11 +6,12 @@
 
 #define SRTC_PACKAGE_NAME "org/kman/srtctest/rtc"
 
-namespace srtc::android {
+namespace srtc::android
+{
 
 std::string fromJavaString(JNIEnv* env, jstring str);
 
 void initJNIEnv(JavaVM* vm);
 JNIEnv* getJNIEnv();
 
-}
+} // namespace srtc::android

@@ -1,13 +1,15 @@
 #pragma once
 
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
 
 #include <jni.h>
 
-namespace srtc::android {
+namespace srtc::android
+{
 
-class ClassMap {
+class ClassMap
+{
 public:
     ClassMap();
 
@@ -36,4 +38,4 @@ private:
     std::unordered_map<std::string, jfieldID> mFieldMap;
 };
 
-}
+} // namespace srtc::android

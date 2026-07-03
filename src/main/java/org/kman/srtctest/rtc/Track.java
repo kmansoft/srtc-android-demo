@@ -29,20 +29,14 @@ public class Track {
         public boolean stereo;
     }
 
-    Track(int trackId,
-          int payloadId,
+    Track(int payloadId,
           int codec,
           @Nullable CodecOptions codecOptions,
           @Nullable SimulcastLayer simulcastLayer) {
-        mTrackId = trackId;
         mPayloadId = payloadId;
         mCodec = codec;
         mCodecOptions = codecOptions;
         mSimulcastLayer = simulcastLayer;
-    }
-
-    public int getTrackId() {
-        return mTrackId;
     }
 
     public int getPayloadId() {
@@ -65,11 +59,10 @@ public class Track {
     @Override
     public String toString() {
         return String.format(Locale.US,
-                "Track(trackId=%d, payloadId=%d, codec=%d, codecOptions=%s, layer=%s)",
-                mTrackId, mPayloadId, mCodec, mCodecOptions, mSimulcastLayer);
+                "Track(payloadId=%d, codec=%d, codecOptions=%s, layer=%s)",
+                mPayloadId, mCodec, mCodecOptions, mSimulcastLayer);
     }
 
-    private final int mTrackId;
     private final int mPayloadId;
     private final int mCodec;
     private final CodecOptions mCodecOptions;

@@ -4,13 +4,15 @@
 
 #include <jni.h>
 
-namespace srtc::android {
+namespace srtc::android
+{
 
-class JavaError {
+class JavaError
+{
 public:
     static void initializeJNI(JNIEnv* env);
 
     static void throwSRtcException(JNIEnv* env, const srtc::Error& error);
 };
 
-}
+} // namespace srtc::android

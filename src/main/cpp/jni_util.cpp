@@ -3,19 +3,22 @@
 
 #include "jni_util.h"
 
-namespace  {
+namespace
+{
 
 std::once_flag gJniEnvInit;
 pthread_key_t gJniPThreadKey;
 JavaVM* gJavaVM;
 
-void onPThreadDestroy(void* ) {
+void onPThreadDestroy(void*)
+{
     gJavaVM->DetachCurrentThread();
 }
 
-}
+} // namespace
 
-namespace srtc::android {
+namespace srtc::android
+{
 
 std::string fromJavaString(JNIEnv* env, jstring str)
 {
@@ -26,27 +29,23 @@ std::string fromJavaString(JNIEnv* env, jstring str)
     return res;
 }
 
-void initJNIEnv(JavaVM* vm) {
+void initJNIEnv(JavaVM* vm)
+{
     gJavaVM = vm;
 }
 
-JNIEnv* getJNIEnv() {
-    std::call_once(gJniEnvInit, [] {
-        pthread_key_create(&gJniPThreadKey, onPThreadDestroy);
-    });
+JNIEnv* getJNIEnv()
+{
+    std::call_once(gJniEnvInit, [] { pthread_key_create(&gJniPThreadKey, onPThreadDestroy); });
 
     // Try the thread local
-    auto env = static_cast<JNIEnv *>(pthread_getspecific(gJniPThreadKey));
+    auto env = static_cast<JNIEnv*>(pthread_getspecific(gJniPThreadKey));
     if (env) {
         return env;
     }
 
     // Nope, attach to the VM
-    JavaVMAttachArgs args {
-        .version = JNI_VERSION_1_6,
-        .name = nullptr,
-        .group = nullptr
-    };
+    JavaVMAttachArgs args{ .version = JNI_VERSION_1_6, .name = nullptr, .group = nullptr };
     gJavaVM->AttachCurrentThread(&env, &args);
 
     pthread_setspecific(gJniPThreadKey, env);
@@ -54,4 +53,4 @@ JNIEnv* getJNIEnv() {
     return env;
 }
 
-}
+} // namespace srtc::android

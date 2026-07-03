@@ -3,7 +3,8 @@
 
 #include "jni_class_map.h"
 
-namespace srtc::android {
+namespace srtc::android
+{
 
 ClassMap::ClassMap()
     : mClass(nullptr)
@@ -43,7 +44,7 @@ ClassMap& ClassMap::findField(JNIEnv* env, const char* name, const char* type)
     return *this;
 }
 
-jobject ClassMap::getFieldObject(JNIEnv *env, jobject obj, const char* name) const
+jobject ClassMap::getFieldObject(JNIEnv* env, jobject obj, const char* name) const
 {
     const auto iter = mFieldMap.find(name);
     assert(iter != mFieldMap.end());
@@ -51,7 +52,7 @@ jobject ClassMap::getFieldObject(JNIEnv *env, jobject obj, const char* name) con
     return env->GetObjectField(obj, iter->second);
 }
 
-jint ClassMap::getFieldInt(JNIEnv *env, jobject obj, const char* name) const
+jint ClassMap::getFieldInt(JNIEnv* env, jobject obj, const char* name) const
 {
     const auto iter = mFieldMap.find(name);
     assert(iter != mFieldMap.end());
@@ -59,7 +60,7 @@ jint ClassMap::getFieldInt(JNIEnv *env, jobject obj, const char* name) const
     return env->GetIntField(obj, iter->second);
 }
 
-jboolean ClassMap::getFieldBoolean(JNIEnv *env, jobject obj, const char* name) const
+jboolean ClassMap::getFieldBoolean(JNIEnv* env, jobject obj, const char* name) const
 {
     const auto iter = mFieldMap.find(name);
     assert(iter != mFieldMap.end());
@@ -67,7 +68,7 @@ jboolean ClassMap::getFieldBoolean(JNIEnv *env, jobject obj, const char* name) c
     return env->GetBooleanField(obj, iter->second);
 }
 
-std::string ClassMap::getFieldString(JNIEnv *env, jobject obj, const char* name) const
+std::string ClassMap::getFieldString(JNIEnv* env, jobject obj, const char* name) const
 {
     const auto iter = mFieldMap.find(name);
     assert(iter != mFieldMap.end());
@@ -77,7 +78,7 @@ std::string ClassMap::getFieldString(JNIEnv *env, jobject obj, const char* name)
     const auto value = env->GetObjectField(obj, iter->second);
     if (value != nullptr) {
         const auto jstr = static_cast<jstring>(value);
-        const auto ptr  = env->GetStringUTFChars(jstr, nullptr);
+        const auto ptr = env->GetStringUTFChars(jstr, nullptr);
         res = ptr;
         env->ReleaseStringUTFChars(jstr, ptr);
     }
@@ -173,7 +174,6 @@ jobject ClassMap::newObject(JNIEnv* env, ...)
     va_end(args);
 
     return obj;
-
 }
 
-}
+} // namespace srtc::android
